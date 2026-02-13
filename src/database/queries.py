@@ -128,7 +128,7 @@ def get_assigned_clips_for_user(user_id, dataset_path):
         "start time" as start_time,
         "scientific name" as species_array,
         confidence as confidence_array,
-        "max uncertainty" as uncertainty_array,
+        "max uncertainty" as max_uncertainty,
         userID
     FROM '{dataset_path}'
     WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)
@@ -143,7 +143,7 @@ def get_assigned_clips_for_user(user_id, dataset_path):
             "start_time": row[2],
             "species_array": row[3],
             "confidence_array": row[4],
-            "uncertainty_array": row[5],
+            "max_uncertainty": row[5],
             "userID": row[6],
         }
         for row in results
@@ -153,8 +153,8 @@ def get_assigned_clips_for_user(user_id, dataset_path):
 
 
 @st.cache_data(ttl=300)
-def get_validated_pro_clips(user_id):
-    """Get clips already validated by this user.
+def get_validated_pro_clips(user_id, dataset_path):
+    """Get clips already validated by this user for the given dataset.
     Returns set of (filename, start_time) tuples.
     """
     import tempfile
@@ -170,6 +170,11 @@ def get_validated_pro_clips(user_id):
         S3_BUCKET,
         S3_ENDPOINT,
         S3_SECRET_ACCESS_KEY,
+    )
+
+    # Extract dataset name for filtering
+    dataset_name = (
+        dataset_path.split("/")[-1].replace(".parquet", "") if dataset_path else ""
     )
 
     try:
@@ -189,7 +194,9 @@ def get_validated_pro_clips(user_id):
 
         all_validations = []
         for obj in response["Contents"]:
-            if obj["Key"].endswith(".csv"):
+            # Only load files for this dataset
+            filename = obj["Key"].split("/")[-1]
+            if obj["Key"].endswith(".csv") and filename.startswith(f"{dataset_name}_"):
                 try:
                     with tempfile.NamedTemporaryFile(
                         mode="w+", suffix=".csv", delete=False
@@ -218,9 +225,9 @@ def get_validated_pro_clips(user_id):
         return set()
 
 
-def _get_validated_clips_with_session(user_id):
+def _get_validated_clips_with_session(user_id, dataset_path):
     """Get all validated clips including session state."""
-    validated_clips = get_validated_pro_clips(user_id)
+    validated_clips = get_validated_pro_clips(user_id, dataset_path)
     if hasattr(st.session_state, "expert_validated_clips_session"):
         validated_clips = validated_clips.union(
             st.session_state.expert_validated_clips_session
@@ -234,7 +241,7 @@ def get_random_assigned_clip(user_id, dataset_path):
     Returns dict with clip info, or 'all_validated': True if done.
     """
     conn = get_duckdb_connection()
-    validated_clips = _get_validated_clips_with_session(user_id)
+    validated_clips = _get_validated_clips_with_session(user_id, dataset_path)
 
     if validated_clips:
         validated_tuples = [
@@ -271,7 +278,7 @@ def get_random_assigned_clip(user_id, dataset_path):
                 "start_time": result[2],
                 "species_array": result[3],
                 "confidence_array": result[4],
-                "uncertainty_array": result[5],
+                "max_uncertainty": result[5],
                 "userID": result[6],
                 "all_validated": False,
             }
@@ -297,7 +304,7 @@ def get_remaining_pro_clips_count(user_id, dataset_path):
     Uses DuckDB COUNT for performance.
     """
     conn = get_duckdb_connection()
-    validated_clips = _get_validated_clips_with_session(user_id)
+    validated_clips = _get_validated_clips_with_session(user_id, dataset_path)
 
     if validated_clips:
         validated_tuples = [

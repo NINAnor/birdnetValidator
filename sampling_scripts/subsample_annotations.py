@@ -14,7 +14,7 @@ Usage:
         --samples-per-bin 2 \
         --bin-size 0.1 \
         --user-ids user001 user002 user003 \
-        --output-prefix validation_dataset/annotations_sample
+        --output-path validation_dataset/sylvia_atricapilla_annotations.parquet
 """
 
 import argparse
@@ -27,7 +27,7 @@ from sampling_utils import assign_user_ids, count_unique_species
 # S3 defaults
 DEFAULT_S3_BUCKET = "bencretois-ns8129k-proj-tabmon"
 DEFAULT_INPUT_PATH = "Listening_Lab"
-DEFAULT_OUTPUT_PATH = "validation_dataset"
+DEFAULT_OUTPUT_PATH = "validation_dataset/annotations_sample.parquet"
 
 
 def print_header(args):
@@ -36,9 +36,7 @@ def print_header(args):
     print("TABMON Annotation Subsampling Script")
     print("=" * 70)
     print(f"\n📂 Input:  s3://{args.s3_bucket}/{args.input_prefix}/")
-    print(
-        f"📂 Output: s3://{args.s3_bucket}/{args.output_prefix}/{args.output_filename}"
-    )
+    print(f"📂 Output: s3://{args.s3_bucket}/{args.output_path}")
     print(f"\n🎯 Target species ({len(args.species)}):")
     for species in args.species:
         print(f"   • {species}")
@@ -85,9 +83,9 @@ def main():
         help=f"S3 input prefix (default: {DEFAULT_INPUT_PATH})",
     )
     parser.add_argument(
-        "--output-prefix",
+        "--output-path",
         default=DEFAULT_OUTPUT_PATH,
-        help=f"S3 output prefix (default: {DEFAULT_OUTPUT_PATH})",
+        help=f"S3 output path with filename (default: {DEFAULT_OUTPUT_PATH})",
     )
     parser.add_argument(
         "--species",
@@ -118,11 +116,6 @@ def main():
         nargs="+",
         default=None,
         help="User IDs for annotation assignment",
-    )
-    parser.add_argument(
-        "--output-filename",
-        default="annotations_sample.parquet",
-        help="Output filename (default: annotations_sample.parquet)",
     )
     parser.add_argument(
         "--random-seed",
@@ -186,8 +179,7 @@ def main():
 
     # Step 4: Upload to S3
     print("\n[4/4] Uploading to S3...")
-    output_key = f"{args.output_prefix}/{args.output_filename}"
-    output_s3_path = upload_to_s3(df_final, args.s3_bucket, output_key)
+    output_s3_path = upload_to_s3(df_final, args.s3_bucket, args.output_path)
     print(f"  ✓ Uploaded to {output_s3_path}")
 
     # Print summary

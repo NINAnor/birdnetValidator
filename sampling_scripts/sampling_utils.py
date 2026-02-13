@@ -20,8 +20,10 @@ def get_duckdb_s3_connection():
     con.execute("INSTALL httpfs;")
     con.execute("LOAD httpfs;")
 
-    s3_endpoint = os.getenv("S3_ENDPOINT", "").replace("https://", "").replace("http://", "")
-    
+    s3_endpoint = (
+        os.getenv("S3_ENDPOINT", "").replace("https://", "").replace("http://", "")
+    )
+
     con.execute("SET s3_region='us-east-1';")
     con.execute(f"SET s3_access_key_id='{os.getenv('S3_ACCESS_KEY_ID')}';")
     con.execute(f"SET s3_secret_access_key='{os.getenv('S3_SECRET_ACCESS_KEY')}';")
@@ -42,11 +44,11 @@ def create_confidence_bins(confidence_values, bin_size=0.1):
 def extract_target_species_confidence(df, target_species):
     """
     Extract maximum confidence of target species from segments.
-    
+
     Returns list of dicts with segment_idx and target_max_confidence.
     """
     segments_with_conf = []
-    
+
     for idx, row in df.iterrows():
         species_list = row["scientific name"]
         confidence_list = row["confidence"]
@@ -54,6 +56,7 @@ def extract_target_species_confidence(df, target_species):
         # Handle string representations
         if isinstance(species_list, str):
             import ast
+
             species_list = ast.literal_eval(species_list)
             confidence_list = ast.literal_eval(confidence_list)
 
@@ -65,10 +68,9 @@ def extract_target_species_confidence(df, target_species):
         ]
 
         if target_confidences:
-            segments_with_conf.append({
-                "segment_idx": idx,
-                "target_max_confidence": max(target_confidences)
-            })
+            segments_with_conf.append(
+                {"segment_idx": idx, "target_max_confidence": max(target_confidences)}
+            )
 
     return segments_with_conf
 
@@ -89,13 +91,14 @@ def assign_user_ids(df, user_ids):
 def count_unique_species(df):
     """Count unique species across all segments in the dataframe."""
     all_unique_species = set()
-    
+
     for species_array in df["scientific name"]:
         if isinstance(species_array, list | np.ndarray):
             all_unique_species.update(species_array)
         elif isinstance(species_array, str):
             import ast
+
             species_list = ast.literal_eval(species_array)
             all_unique_species.update(species_list)
-    
+
     return len(all_unique_species)

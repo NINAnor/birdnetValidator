@@ -1,7 +1,5 @@
 """Expert Mode Validation Handlers - checklist of top species."""
 
-import ast
-
 import pandas as pd
 import streamlit as st
 
@@ -26,23 +24,6 @@ def _get_all_species_list(language_code="Scientific_Name"):
         for _, row in translations_df.iterrows()
     ]
     return sorted(species_list)
-
-
-@st.cache_data(show_spinner=False)
-def _parse_array_string(array_str):
-    """Parse array string from parquet, handling Unicode quotes.
-    Cached to avoid repeated parsing of same data."""
-    if not isinstance(array_str, str):
-        return array_str
-
-    # Replace Unicode curly quotes with ASCII quotes
-    cleaned = (
-        array_str.replace("\u201c", '"')
-        .replace("\u201d", '"')
-        .replace("\u2018", "'")
-        .replace("\u2019", "'")
-    )
-    return ast.literal_eval(cleaned)
 
 
 def render_pro_validation_form(result, selections):
@@ -71,20 +52,17 @@ def render_pro_validation_form(result, selections):
             st.markdown("**Select which species you can actually hear:**")
             st.markdown("---")
 
-            # Parse and sort species by confidence (descending)
-            species_list = _parse_array_string(result.get("species_array", []))
-            confidence_list = _parse_array_string(result.get("confidence_array", []))
-            uncertainty_list = _parse_array_string(result.get("uncertainty_array", []))
+            # Get species and confidence arrays (DuckDB returns actual lists)
+            species_list = result.get("species_array", []) or []
+            confidence_list = result.get("confidence_array", []) or []
 
+            # Sort species by confidence (descending)
             species_data = sorted(
                 [
                     (
                         species,
                         float(confidence_list[idx])
                         if idx < len(confidence_list)
-                        else 0.0,
-                        float(uncertainty_list[idx])
-                        if idx < len(uncertainty_list)
                         else 0.0,
                     )
                     for idx, species in enumerate(species_list)
@@ -95,7 +73,7 @@ def render_pro_validation_form(result, selections):
 
             # Get translations
             language_code = selections.get("language_code", "Scientific_Name")
-            scientific_names = [species for species, _, _ in species_data]
+            scientific_names = [species for species, _ in species_data]
             display_name_map = get_species_display_names(
                 scientific_names, language_code
             )
@@ -105,7 +83,7 @@ def render_pro_validation_form(result, selections):
 
             # Display checklist
             selected_species = []
-            for idx, (species, conf_val, _) in enumerate(species_data):
+            for idx, (species, conf_val) in enumerate(species_data):
                 display_name = scientific_to_display.get(species, species)
                 if st.checkbox(
                     f"{display_name} (Birdnet conf: {conf_val:.2f})",
@@ -210,10 +188,10 @@ def _handle_pro_validation_submission(
 
     all_identified_species = selected_species + additional_species
 
-    # Parse arrays from parquet to ensure they're proper lists
-    birdnet_species = _parse_array_string(result.get("species_array", []))
-    birdnet_confidences = _parse_array_string(result.get("confidence_array", []))
-    birdnet_uncertainties = _parse_array_string(result.get("uncertainty_array", []))
+    # Get arrays directly (DuckDB returns actual lists)
+    birdnet_species = result.get("species_array", []) or []
+    birdnet_confidences = result.get("confidence_array", []) or []
+    max_uncertainty = result.get("max_uncertainty", 0.0)
 
     # Prepare validation data
     validation_data = {
@@ -222,10 +200,10 @@ def _handle_pro_validation_submission(
         "deployment_id": result.get("deployment_id", ""),
         "birdnet_species_detected": birdnet_species,
         "birdnet_confidences": birdnet_confidences,
-        "birdnet_uncertainties": birdnet_uncertainties,
+        "max_uncertainty": max_uncertainty,
         "start_time": result["start_time"],
         "identified_species": all_identified_species,
-        "species_count": len(all_identified_species),  # Number of species identified
+        "species_count": len(all_identified_species),
         "user_confidence": user_confidence,
         "user_notes": user_notes,
         "timestamp": pd.Timestamp.now(),

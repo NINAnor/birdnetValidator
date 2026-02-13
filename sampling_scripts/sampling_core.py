@@ -1,7 +1,6 @@
 """Core sampling logic for annotation dataset creation."""
 
 import pandas as pd
-
 from sampling_utils import (
     create_confidence_bins,
     extract_target_species_confidence,
@@ -12,7 +11,7 @@ from sampling_utils import (
 def load_segments_from_s3(s3_bucket, input_prefix, target_species, target_sites=None):
     """
     Load segments containing target species from S3 parquet files.
-    
+
     Uses DuckDB for efficient querying with partition pruning when sites specified.
     """
     con = get_duckdb_s3_connection()
@@ -25,9 +24,11 @@ def load_segments_from_s3(s3_bucket, input_prefix, target_species, target_sites=
             f"s3://{s3_bucket}/{input_prefix}/**/device_id={site}/*.parquet"
             for site in target_sites
         ]
-        
+
         all_dfs = []
-        for i, (pattern, site) in enumerate(zip(partition_patterns, target_sites), 1):
+        for i, (pattern, site) in enumerate(
+            zip(partition_patterns, target_sites, strict=False), 1
+        ):
             try:
                 print(f"    [{i}/{len(target_sites)}] Reading {site}...")
                 query = f"""
@@ -37,7 +38,7 @@ def load_segments_from_s3(s3_bucket, input_prefix, target_species, target_sites=
                     WHERE list_has_any("scientific name", {species_array})
                 """
                 df = con.execute(query).fetchdf()
-                
+
                 if not df.empty:
                     all_dfs.append(df)
                     print(f"       ✓ Found {len(df):,} matching segments")
@@ -77,7 +78,7 @@ def subsample_by_confidence_bins(
 ):
     """
     Subsample segments by confidence bins of target species.
-    
+
     Preserves full segment data (all species arrays) but bins/samples
     based on maximum confidence of target species in each segment.
     """
@@ -112,8 +113,7 @@ def subsample_by_confidence_bins(
 
         percentage = (n_samples / len(bin_data)) * 100
         print(
-            f"    {bin_label}: {n_samples:,} from "
-            f"{len(bin_data):,} ({percentage:.1f}%)"
+            f"    {bin_label}: {n_samples:,} from {len(bin_data):,} ({percentage:.1f}%)"
         )
 
     return df.iloc[subsampled_indices].copy().reset_index(drop=True)

@@ -15,7 +15,7 @@ S3_BASE_URL = f"s3://{S3_BUCKET}"
 # Expert Mode Configuration
 # ============================================================================
 
-# Expert mode datasets folder (contains multiple parquet files for annotation)
+# Expert mode datasets folder
 EXPERT_DATASETS_FOLDER = f"{S3_BASE_URL}/validation_dataset"
 
 # Expert mode validations stored in: validations_expert/session_{session_id}.csv

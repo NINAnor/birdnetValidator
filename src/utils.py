@@ -82,6 +82,14 @@ def save_pro_validation_response(validation_data):
 
     session_id = st.session_state.session_id
 
+    # Get dataset name from session state
+    dataset_path = st.session_state.get("expert_selected_dataset", "")
+    dataset_name = (
+        dataset_path.split("/")[-1].replace(".parquet", "")
+        if dataset_path
+        else "unknown"
+    )
+
     # Configure boto3 for S3 access
     s3_client = boto3.client(
         "s3",
@@ -93,7 +101,7 @@ def save_pro_validation_response(validation_data):
 
     bucket = S3_BUCKET
 
-    key = f"{EXPERT_VALIDATIONS_PREFIX}/session_{session_id}.csv"
+    key = f"{EXPERT_VALIDATIONS_PREFIX}/{dataset_name}_session_{session_id}.csv"
 
     # Convert arrays to pipe-separated strings for clean CSV storage
     def list_to_string(value):
@@ -109,9 +117,6 @@ def save_pro_validation_response(validation_data):
         ),
         "birdnet_confidences": list_to_string(
             validation_data.get("birdnet_confidences")
-        ),
-        "birdnet_uncertainties": list_to_string(
-            validation_data.get("birdnet_uncertainties")
         ),
     }
 
