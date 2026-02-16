@@ -191,7 +191,6 @@ def _handle_pro_validation_submission(
     # Get arrays directly (DuckDB returns actual lists)
     birdnet_species = result.get("species_array", []) or []
     birdnet_confidences = result.get("confidence_array", []) or []
-    max_uncertainty = result.get("max_uncertainty", 0.0)
 
     # Prepare validation data
     validation_data = {
@@ -200,7 +199,6 @@ def _handle_pro_validation_submission(
         "deployment_id": result.get("deployment_id", ""),
         "birdnet_species_detected": birdnet_species,
         "birdnet_confidences": birdnet_confidences,
-        "max_uncertainty": max_uncertainty,
         "start_time": result["start_time"],
         "identified_species": all_identified_species,
         "species_count": len(all_identified_species),

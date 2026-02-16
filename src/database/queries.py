@@ -128,7 +128,6 @@ def get_assigned_clips_for_user(user_id, dataset_path):
         "start time" as start_time,
         "scientific name" as species_array,
         confidence as confidence_array,
-        "max uncertainty" as max_uncertainty,
         userID
     FROM '{dataset_path}'
     WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)
@@ -143,8 +142,7 @@ def get_assigned_clips_for_user(user_id, dataset_path):
             "start_time": row[2],
             "species_array": row[3],
             "confidence_array": row[4],
-            "max_uncertainty": row[5],
-            "userID": row[6],
+            "userID": row[5],
         }
         for row in results
     ]
@@ -260,7 +258,7 @@ def get_random_assigned_clip(user_id, dataset_path):
 
     query = f"""
     SELECT fullPath, deployment_id, "start time", "scientific name",
-           confidence, "max uncertainty", userID
+           confidence, userID
     FROM '{dataset_path}'
     WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)
     {exclusion_clause}
@@ -278,8 +276,7 @@ def get_random_assigned_clip(user_id, dataset_path):
                 "start_time": result[2],
                 "species_array": result[3],
                 "confidence_array": result[4],
-                "max_uncertainty": result[5],
-                "userID": result[6],
+                "userID": result[5],
                 "all_validated": False,
             }
         else:

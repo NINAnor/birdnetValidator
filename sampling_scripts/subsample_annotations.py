@@ -8,19 +8,24 @@ Creates annotation datasets by:
 - Distributing among annotators
 
 Usage:
-    uv run python sampling_scripts/subsample_annotations.py \
-        --species "Sylvia atricapilla" \
-        --sites e9e2754 5b05fe12 \
-        --samples-per-bin 2 \
-        --bin-size 0.1 \
-        --user-ids user001 user002 user003 \
-        --output-path validation_dataset/sylvia_atricapilla_annotations.parquet
+uv run python sampling_scripts/subsample_annotations.py \
+    --species "Rallus aquaticus" "Porzana porzana" "Zapornia parva" \
+        "Zapornia pusilla" "Botaurus stellaris" "Locustella luscinioides" \
+    --sites cfc291d3 fb104ba8 44e6e23b 3b425ce9 \
+    --samples-per-bin 10 \
+    --bin-size 0.1 \
+    --stratify-by-device \
+    --stratify-by-species \
+    --user-ids daniel \
+    --output-path validation_dataset/loenderveen.parquet
+    --diagnostics
 """
 
 import argparse
 
 import numpy as np
 from sampling_core import load_segments_from_s3, subsample_by_confidence_bins
+from sampling_diagnostics import generate_diagnostics
 from sampling_s3 import upload_to_s3
 from sampling_utils import assign_user_ids, count_unique_species
 
@@ -49,6 +54,8 @@ def print_header(args):
     print("\n📊 Sampling:")
     print(f"   • Per bin: {args.samples_per_bin}")
     print(f"   • Bin size: {args.bin_size}")
+    print(f"   • Stratify by device: {args.stratify_by_device}")
+    print(f"   • Stratify by species: {args.stratify_by_species}")
     print(f"   • Seed: {args.random_seed}")
 
     if args.user_ids:
@@ -63,7 +70,9 @@ def print_summary(df_final, args, output_s3_path):
     print("=" * 70)
     print("\n✅ Successfully created annotation sample")
     print(f"   • Total clips: {len(df_final):,}")
-    print(f"   • Unique species: {count_unique_species(df_final)}")
+    print(f"   • Target species found: {count_unique_species(df_final, args.species)}")
+    if "device_id" in df_final.columns:
+        print(f"   • Devices: {len(df_final['device_id'].unique())}")
     print(f"   • Deployments: {len(df_final['deployment_id'].unique())}")
     if args.user_ids:
         print(f"   • Annotators: {len(args.user_ids)}")
@@ -123,6 +132,26 @@ def main():
         default=42,
         help="Random seed (default: 42)",
     )
+    parser.add_argument(
+        "--stratify-by-device",
+        action="store_true",
+        help="Sample per bin per device instead of globally",
+    )
+    parser.add_argument(
+        "--stratify-by-species",
+        action="store_true",
+        help="Sample independently for each species",
+    )
+    parser.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help="Generate diagnostic plots for the sampled dataset",
+    )
+    parser.add_argument(
+        "--diagnostics-dir",
+        default="diagnostics",
+        help="Directory to save diagnostic plots (default: diagnostics)",
+    )
 
     args = parser.parse_args()
     print_header(args)
@@ -138,13 +167,21 @@ def main():
         return
 
     # Step 2: Subsample by confidence
-    print("\n[2/4] Subsampling by confidence bins...")
-    df_sampled = subsample_by_confidence_bins(
+    strategies = []
+    if args.stratify_by_device:
+        strategies.append("per device")
+    if args.stratify_by_species:
+        strategies.append("per species")
+    strategy = " + ".join(strategies) if strategies else "global"
+    print(f"\n[2/4] Subsampling by confidence bins ({strategy})...")
+    df_sampled, sampling_metadata = subsample_by_confidence_bins(
         df_segments,
         args.species,
         samples_per_bin=args.samples_per_bin,
         bin_size=args.bin_size,
         random_seed=args.random_seed,
+        stratify_by_device=args.stratify_by_device,
+        stratify_by_species=args.stratify_by_species,
     )
 
     if df_sampled.empty:
@@ -178,9 +215,20 @@ def main():
     df_final = df_sampled[[col for col in column_order if col in df_sampled.columns]]
 
     # Step 4: Upload to S3
-    print("\n[4/4] Uploading to S3...")
+    print("\n[4/5] Uploading to S3...")
     output_s3_path = upload_to_s3(df_final, args.s3_bucket, args.output_path)
     print(f"  ✓ Uploaded to {output_s3_path}")
+
+    # Step 5: Generate diagnostics
+    if args.diagnostics:
+        print("\n[5/5] Generating diagnostic plots...")
+        generate_diagnostics(
+            df_sampled,
+            args.species,
+            args.diagnostics_dir,
+            args.bin_size,
+            sampling_metadata=sampling_metadata,
+        )
 
     # Print summary
     print_summary(df_final, args, output_s3_path)

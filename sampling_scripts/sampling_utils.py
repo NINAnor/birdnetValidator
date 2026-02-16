@@ -1,5 +1,6 @@
 """Utility functions for annotation sampling operations."""
 
+import ast
 import os
 from pathlib import Path
 
@@ -41,38 +42,63 @@ def create_confidence_bins(confidence_values, bin_size=0.1):
     return pd.cut(confidence_values, bins=bins, labels=bin_labels, include_lowest=True)
 
 
-def extract_target_species_confidence(df, target_species):
-    """
-    Extract maximum confidence of target species from segments.
+def _parse_arrays(species_list, confidence_list):
+    """Parse species/confidence arrays, handling string representations."""
+    if isinstance(species_list, str):
+        species_list = ast.literal_eval(species_list)
+        confidence_list = ast.literal_eval(confidence_list)
+    return species_list, confidence_list
 
-    Returns list of dicts with segment_idx and target_max_confidence.
+
+def extract_species_confidence(df, target_species, per_species=False):
     """
-    segments_with_conf = []
+    Extract confidence values for target species from segments.
+
+    Args:
+        df: DataFrame with segments
+        target_species: List of species to extract
+        per_species: If True, return one record per species per segment.
+                     If False, return max confidence across target species.
+
+    Returns:
+        List of dicts with segment_idx and confidence info.
+    """
+    records = []
 
     for idx, row in df.iterrows():
-        species_list = row["scientific name"]
-        confidence_list = row["confidence"]
+        species_list, confidence_list = _parse_arrays(
+            row["scientific name"], row["confidence"]
+        )
 
-        # Handle string representations
-        if isinstance(species_list, str):
-            import ast
+        for i, species in enumerate(species_list):
+            if species in target_species and i < len(confidence_list):
+                if per_species:
+                    records.append(
+                        {
+                            "segment_idx": idx,
+                            "species": species,
+                            "confidence": float(confidence_list[i]),
+                        }
+                    )
+                else:
+                    # Find existing record for this segment or create new
+                    existing = next(
+                        (r for r in records if r["segment_idx"] == idx), None
+                    )
+                    conf = float(confidence_list[i])
+                    if existing:
+                        existing["target_max_confidence"] = max(
+                            existing["target_max_confidence"], conf
+                        )
+                    else:
+                        records.append(
+                            {
+                                "segment_idx": idx,
+                                "target_max_confidence": conf,
+                            }
+                        )
 
-            species_list = ast.literal_eval(species_list)
-            confidence_list = ast.literal_eval(confidence_list)
-
-        # Find max confidence among target species
-        target_confidences = [
-            float(confidence_list[i])
-            for i, species in enumerate(species_list)
-            if species in target_species and i < len(confidence_list)
-        ]
-
-        if target_confidences:
-            segments_with_conf.append(
-                {"segment_idx": idx, "target_max_confidence": max(target_confidences)}
-            )
-
-    return segments_with_conf
+    return records
 
 
 def assign_user_ids(df, user_ids):
@@ -81,24 +107,21 @@ def assign_user_ids(df, user_ids):
         df["userID"] = "default_user"
         return df
 
-    # Shuffle and assign in round-robin
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     df["userID"] = [user_ids[i % len(user_ids)] for i in range(len(df))]
-
     return df
 
 
-def count_unique_species(df):
+def count_unique_species(df, target_species=None):
     """Count unique species across all segments in the dataframe."""
-    all_unique_species = set()
+    all_species = set()
 
     for species_array in df["scientific name"]:
         if isinstance(species_array, list | np.ndarray):
-            all_unique_species.update(species_array)
+            all_species.update(species_array)
         elif isinstance(species_array, str):
-            import ast
+            all_species.update(ast.literal_eval(species_array))
 
-            species_list = ast.literal_eval(species_array)
-            all_unique_species.update(species_list)
-
-    return len(all_unique_species)
+    return (
+        len(all_species & set(target_species)) if target_species else len(all_species)
+    )

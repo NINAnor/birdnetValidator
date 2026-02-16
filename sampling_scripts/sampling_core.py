@@ -3,7 +3,7 @@
 import pandas as pd
 from sampling_utils import (
     create_confidence_bins,
-    extract_target_species_confidence,
+    extract_species_confidence,
     get_duckdb_s3_connection,
 )
 
@@ -40,6 +40,7 @@ def load_segments_from_s3(s3_bucket, input_prefix, target_species, target_sites=
                 df = con.execute(query).fetchdf()
 
                 if not df.empty:
+                    df["device_id"] = site  # Add device_id from partition
                     all_dfs.append(df)
                     print(f"       ✓ Found {len(df):,} matching segments")
                 else:
@@ -74,46 +75,152 @@ def load_segments_from_s3(s3_bucket, input_prefix, target_species, target_sites=
 
 
 def subsample_by_confidence_bins(
-    df, target_species, samples_per_bin=50, bin_size=0.1, random_seed=42
+    df,
+    target_species,
+    samples_per_bin=50,
+    bin_size=0.1,
+    random_seed=42,
+    stratify_by_device=False,
+    stratify_by_species=False,
 ):
     """
     Subsample segments by confidence bins of target species.
 
-    Preserves full segment data (all species arrays) but bins/samples
-    based on maximum confidence of target species in each segment.
+    Args:
+        stratify_by_device: If True, sample per bin per device.
+        stratify_by_species: If True, sample per bin per species (independently).
+
+    Returns:
+        Tuple of (sampled_df, sampling_metadata) where sampling_metadata is a DataFrame
+        with columns: species, confidence, device_id, confidence_bin for each sample.
     """
-    # Extract confidence values for target species
-    print("  → Extracting target species confidence...")
-    segments_with_conf = extract_target_species_confidence(df, target_species)
-    conf_df = pd.DataFrame(segments_with_conf)
-    print(f"  → Found {len(conf_df):,} segments with target species")
-
-    # Create bins and show distribution
-    conf_df["confidence_bin"] = create_confidence_bins(
-        conf_df["target_max_confidence"], bin_size
+    print("  → Extracting species confidence...")
+    records = extract_species_confidence(
+        df, target_species, per_species=stratify_by_species
     )
+    conf_df = pd.DataFrame(records)
 
-    print("\n  Confidence distribution:")
-    bin_counts = conf_df["confidence_bin"].value_counts().sort_index()
-    for bin_label, count in bin_counts.items():
-        print(f"    {bin_label}: {count:,} segments")
+    if conf_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
 
-    # Sample from each bin
-    subsampled_indices = []
-    print(f"\n  Sampling {samples_per_bin} per bin:")
+    conf_key = "confidence" if stratify_by_species else "target_max_confidence"
+    print(f"  → Found {len(conf_df):,} records")
 
-    for bin_label in conf_df["confidence_bin"].cat.categories:
-        bin_data = conf_df[conf_df["confidence_bin"] == bin_label]
-        if len(bin_data) == 0:
-            continue
+    conf_df["device_id"] = df.iloc[conf_df["segment_idx"]]["device_id"].values
+    conf_df["confidence_bin"] = create_confidence_bins(conf_df[conf_key], bin_size)
 
-        n_samples = min(samples_per_bin, len(bin_data))
-        sampled = bin_data.sample(n=n_samples, random_state=random_seed)
-        subsampled_indices.extend(sampled["segment_idx"].tolist())
-
-        percentage = (n_samples / len(bin_data)) * 100
-        print(
-            f"    {bin_label}: {n_samples:,} from {len(bin_data):,} ({percentage:.1f}%)"
+    if stratify_by_species:
+        return _subsample_by_species(
+            df,
+            conf_df,
+            target_species,
+            samples_per_bin,
+            random_seed,
+            stratify_by_device,
         )
 
-    return df.iloc[subsampled_indices].copy().reset_index(drop=True)
+    print("\n  Confidence distribution:")
+    for bin_label, count in (
+        conf_df["confidence_bin"].value_counts().sort_index().items()
+    ):
+        print(f"    {bin_label}: {count:,} segments")
+
+    indices, metadata = _sample_from_bins(
+        conf_df, samples_per_bin, random_seed, stratify_by_device, species=None
+    )
+    metadata_df = pd.DataFrame(metadata) if metadata else pd.DataFrame()
+    return df.iloc[indices].copy().reset_index(drop=True), metadata_df
+
+
+def _subsample_by_species(
+    df, conf_df, target_species, samples_per_bin, random_seed, stratify_by_device
+):
+    """Sample independently for each target species."""
+    all_indices = set()
+    all_metadata = []
+
+    for species in target_species:
+        species_df = conf_df[conf_df["species"] == species]
+        if species_df.empty:
+            print(f"\n  🐦 {species}: No detections found")
+            continue
+
+        print(f"\n  🐦 {species}: {len(species_df):,} detections")
+        indices, metadata = _sample_from_bins(
+            species_df,
+            samples_per_bin,
+            random_seed,
+            stratify_by_device,
+            species=species,
+        )
+        all_indices.update(indices)
+        all_metadata.extend(metadata)
+        print(f"     → Sampled {len(indices)} segments")
+
+    metadata_df = pd.DataFrame(all_metadata) if all_metadata else pd.DataFrame()
+    return df.iloc[list(all_indices)].copy().reset_index(drop=True), metadata_df
+
+
+def _sample_from_bins(
+    conf_df, samples_per_bin, random_seed, stratify_by_device, species=None
+):
+    """Sample from confidence bins, optionally stratified by device.
+
+    Returns:
+        Tuple of (indices, metadata) where metadata tracks what was sampled.
+    """
+    subsampled_indices = []
+    metadata = []
+
+    if stratify_by_device:
+        devices = conf_df["device_id"].unique()
+        for device in devices:
+            device_data = conf_df[conf_df["device_id"] == device]
+            print(f"    📍 {device}:")
+
+            for bin_label in conf_df["confidence_bin"].cat.categories:
+                bin_data = device_data[device_data["confidence_bin"] == bin_label]
+                if len(bin_data) == 0:
+                    continue
+
+                n = min(samples_per_bin, len(bin_data))
+                sampled = bin_data.sample(n=n, random_state=random_seed)
+                subsampled_indices.extend(sampled["segment_idx"].tolist())
+
+                # Track metadata for each sampled segment
+                for _, row in sampled.iterrows():
+                    metadata.append(
+                        {
+                            "species": species or row.get("species", "unknown"),
+                            "confidence": row.get(
+                                "confidence", row.get("target_max_confidence")
+                            ),
+                            "device_id": device,
+                            "confidence_bin": str(bin_label),
+                        }
+                    )
+                print(f"       {bin_label}: {n}/{len(bin_data)}")
+    else:
+        for bin_label in conf_df["confidence_bin"].cat.categories:
+            bin_data = conf_df[conf_df["confidence_bin"] == bin_label]
+            if len(bin_data) == 0:
+                continue
+
+            n = min(samples_per_bin, len(bin_data))
+            sampled = bin_data.sample(n=n, random_state=random_seed)
+            subsampled_indices.extend(sampled["segment_idx"].tolist())
+
+            for _, row in sampled.iterrows():
+                metadata.append(
+                    {
+                        "species": species or row.get("species", "unknown"),
+                        "confidence": row.get(
+                            "confidence", row.get("target_max_confidence")
+                        ),
+                        "device_id": row.get("device_id", "unknown"),
+                        "confidence_bin": str(bin_label),
+                    }
+                )
+            print(f"    {bin_label}: {n}/{len(bin_data)}")
+
+    return subsampled_indices, metadata

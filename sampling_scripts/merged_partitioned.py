@@ -16,17 +16,10 @@ import argparse
 import io
 import os
 import time
-from pathlib import Path
 
 import boto3
-import duckdb
 import numpy as np
-from dotenv import load_dotenv
-
-env_path = Path(__file__).parent.parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
-
+from sampling_utils import get_duckdb_s3_connection
 
 # S3 defaults
 DEFAULT_S3_BUCKET = "bencretois-ns8129k-proj-tabmon"
@@ -47,31 +40,6 @@ def bugg_id_to_folder(id_str):
     """Convert a device_id string to the bugg directory name."""
     padded_id = id_str.rjust(15, "0")
     return f"bugg_RPiID-1{padded_id}"
-
-
-def get_duckdb_s3_connection():
-    """Create a DuckDB connection configured for S3 access."""
-    con = duckdb.connect(database=":memory:")
-
-    con.execute("INSTALL httpfs;")
-    con.execute("LOAD httpfs;")
-
-    # Get S3 credentials and endpoint from environment
-    s3_access_key = os.getenv("S3_ACCESS_KEY_ID")
-    s3_secret_key = os.getenv("S3_SECRET_ACCESS_KEY")
-    s3_endpoint = os.getenv("S3_ENDPOINT")
-
-    # Remove protocol if present - DuckDB adds it automatically
-    s3_endpoint = s3_endpoint.replace("https://", "").replace("http://", "")
-
-    con.execute("SET s3_region='us-east-1';")
-    con.execute(f"SET s3_access_key_id='{s3_access_key}';")
-    con.execute(f"SET s3_secret_access_key='{s3_secret_key}';")
-    con.execute(f"SET s3_endpoint='{s3_endpoint}';")
-    con.execute("SET s3_use_ssl=true;")
-    con.execute("SET s3_url_style='path';")
-
-    return con
 
 
 def aggregate_parquet(bucket, s3_key):
