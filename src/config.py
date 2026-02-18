@@ -18,6 +18,9 @@ S3_BASE_URL = f"s3://{S3_BUCKET}"
 # Expert mode datasets folder
 EXPERT_DATASETS_FOLDER = f"{S3_BASE_URL}/validation_dataset"
 
+# Site info CSV for mapping device IDs to site names
+SITE_INFO_S3_PATH = f"{S3_BASE_URL}/site_info.csv"
+
 # Expert mode validations stored in: validations_expert/session_{session_id}.csv
 EXPERT_VALIDATIONS_PREFIX = "validations_expert"
 

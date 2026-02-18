@@ -72,9 +72,71 @@ def render_audio_player(clip):
     st.audio(clip, format="audio/wav", sample_rate=48000)
 
 
-def render_clip_metadata(filename):
-    """Render clip metadata."""
-    st.markdown(f"**📁 File:** `{filename}`")
+def _parse_recording_datetime(filename):
+    """Parse recording datetime from filename like 2025-02-09T01_54_51.065Z."""
+    import re
+
+    match = re.search(r"(\d{4}-\d{2}-\d{2})T(\d{2}_\d{2}_\d{2})", filename)
+    if match:
+        date_str = match.group(1)
+        time_str = match.group(2).replace("_", ":")
+        return f"{date_str} {time_str}"
+    return None
+
+
+def _get_site_info(deployment_id):
+    """Look up site name and cluster from deployment_id.
+
+    Extracts the device_id (last segment after '_') from deployment_id
+    and maps it to site/cluster info via site_info.csv.
+
+    Returns (site_name, cluster) tuple.
+    """
+    from database.queries import get_device_site_map
+
+    device_site_map = get_device_site_map()
+    if not device_site_map:
+        return deployment_id, None
+
+    # Extract device_id: last segment of deployment_id (e.g. 3b425ce9)
+    device_id = (
+        deployment_id.rsplit("_", 1)[-1]
+        if "_" in deployment_id
+        else deployment_id
+    )
+
+    info = device_site_map.get(device_id)
+    if info:
+        return info["site"], info["cluster"]
+    return deployment_id, None
+
+
+def render_clip_metadata(result):
+    """Render clip metadata including filename, site and detection time."""
+    filename = result.get("filename", "").split("/")[-1]
+    deployment_id = result.get("deployment_id", "")
+    start_time = result.get("start_time", "")
+
+    recording_dt = _parse_recording_datetime(filename)
+    if recording_dt and start_time is not None:
+        from datetime import datetime, timedelta
+
+        try:
+            base_dt = datetime.strptime(recording_dt, "%Y-%m-%d %H:%M:%S")
+            detection_dt = base_dt + timedelta(seconds=float(start_time))
+            detection_str = detection_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError):
+            detection_str = recording_dt
+    else:
+        detection_str = None
+
+    if deployment_id:
+        site_name, cluster = _get_site_info(deployment_id)
+        st.markdown(f"**📍 Site:** `{site_name}`")
+        if cluster:
+            st.markdown(f"**🏘️ Cluster:** `{cluster}`")
+    if detection_str:
+        st.markdown(f"**🔊 Detection time:** `{detection_str}`")
 
 
 def clear_cache_functions(*functions):

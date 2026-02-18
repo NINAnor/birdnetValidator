@@ -10,6 +10,7 @@ from config import (
     S3_BUCKET,
     S3_ENDPOINT,
     S3_SECRET_ACCESS_KEY,
+    SITE_INFO_S3_PATH,
 )
 
 
@@ -26,6 +27,25 @@ def get_duckdb_connection():
     conn.execute("SET s3_use_ssl=true;")
     conn.execute("SET s3_url_style='path';")
     return conn
+
+
+@st.cache_data(ttl=3600)
+def get_device_site_map():
+    """Load device_id to site/cluster mapping from site_info.csv on S3.
+
+    Returns dict mapping device_id -> {"site": ..., "cluster": ...}.
+    """
+    try:
+        conn = get_duckdb_connection()
+        df = conn.execute(
+            f"SELECT DeviceID, Site, Cluster FROM '{SITE_INFO_S3_PATH}'"
+        ).df()
+        return {
+            row["DeviceID"]: {"site": row["Site"], "cluster": row["Cluster"]}
+            for _, row in df.iterrows()
+        }
+    except Exception:
+        return {}
 
 
 def list_available_datasets():

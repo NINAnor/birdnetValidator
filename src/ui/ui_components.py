@@ -89,7 +89,7 @@ def render_pro_clip_section(result, selections):
         full_path = f"s3://{os.getenv('S3_BUCKET')}/{filepath}"
         clip = extract_clip(full_path, result["start_time"])
 
-        render_clip_metadata(result["filename"].split("/")[-1])
+        render_clip_metadata(result)
         render_audio_player(clip)
         render_spectrogram(clip, expanded=True)
         render_pro_load_new_button()
