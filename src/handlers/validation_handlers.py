@@ -138,6 +138,17 @@ def render_pro_validation_form(result, selections):
                 ):
                     user_notes.append(noise)
 
+            st.markdown("---")
+
+            # Free-text comments field
+            st.markdown("#### 💬 Comments")
+            user_comments = st.text_area(
+                "Add any additional comments or observations:",
+                placeholder="E.g., 'Faint call in background', 'Multiple individuals', 'Uncertain due to noise'...",
+                height=100,
+                key="user_comments",
+            )
+
             # Confidence rating
             user_confidence = st.radio(
                 "**How confident are you in your annotations?**",
@@ -161,6 +172,7 @@ def render_pro_validation_form(result, selections):
                     other_species_list,
                     user_notes,
                     user_confidence,
+                    user_comments,
                 )
 
 
@@ -171,6 +183,7 @@ def _handle_pro_validation_submission(
     other_species_list,
     user_notes,
     user_confidence,
+    user_comments,
 ):
     """Handle Expert mode validation form submission."""
     if not user_confidence:
@@ -204,6 +217,7 @@ def _handle_pro_validation_submission(
         "species_count": len(all_identified_species),
         "user_confidence": user_confidence,
         "user_notes": user_notes,
+        "user_comments": user_comments,
         "timestamp": pd.Timestamp.now(),
     }
 
