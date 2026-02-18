@@ -144,7 +144,11 @@ def render_pro_validation_form(result, selections):
             st.markdown("#### 💬 Comments")
             user_comments = st.text_area(
                 "Add any additional comments or observations:",
-                placeholder="E.g., 'Faint call in background', 'Multiple individuals', 'Uncertain due to noise'...",
+                placeholder=(
+                    "E.g., 'Faint call in background', "
+                    "'Multiple individuals', "
+                    "'Uncertain due to noise'..."
+                ),
                 height=100,
                 key="user_comments",
             )

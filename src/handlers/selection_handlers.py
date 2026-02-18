@@ -1,5 +1,7 @@
 """Expert Mode Selection Handlers.
-Manages dataset selection, user authentication, species filtering and language selection.
+
+Manages dataset selection, user authentication,
+species filtering and language selection.
 """
 
 import streamlit as st

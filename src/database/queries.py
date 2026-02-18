@@ -364,9 +364,7 @@ def prefetch_clip_batch(user_id, dataset_path, species_filter=None):
             f"WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR) "
             f"{species_clause}"
         )
-        total = conn.execute(
-            count_query, [user_id] + species_params
-        ).fetchone()[0]
+        total = conn.execute(count_query, [user_id] + species_params).fetchone()[0]
 
         if total > 0:
             return [{"all_validated": True, "total_clips": total}]

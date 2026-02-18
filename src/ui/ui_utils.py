@@ -109,9 +109,7 @@ def _get_site_info(deployment_id):
 
     # Extract device_id: last segment of deployment_id (e.g. 3b425ce9)
     device_id = (
-        deployment_id.rsplit("_", 1)[-1]
-        if "_" in deployment_id
-        else deployment_id
+        deployment_id.rsplit("_", 1)[-1] if "_" in deployment_id else deployment_id
     )
 
     info = device_site_map.get(device_id)
