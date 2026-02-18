@@ -1,12 +1,17 @@
 """Expert Mode Selection Handlers.
-Manages dataset selection, user authentication and language selection.
+Manages dataset selection, user authentication, species filtering and language selection.
 """
 
 import streamlit as st
 
 from config import EXPERT_DATASETS_FOLDER, LANGUAGE_MAPPING
-from database.queries import check_user_has_annotations, list_available_datasets
+from database.queries import (
+    check_user_has_annotations,
+    get_species_for_user,
+    list_available_datasets,
+)
 from ui.ui_utils import render_sidebar_logo
+from utils import get_species_display_names
 
 
 def render_dataset_selection():
@@ -104,9 +109,64 @@ def render_pro_authentication():
     return False, None
 
 
+def render_species_filter(user_id, dataset_path, language_code):
+    """Render species filter selection.
+
+    Args:
+        user_id: User ID
+        dataset_path: Path to the dataset
+        language_code: Language code for species name display
+
+    Returns list of selected species (scientific names), or None for all species.
+    """
+    st.sidebar.markdown("---")
+    st.sidebar.header("🐦 Species Filter")
+
+    # Get available species for this user
+    available_species = get_species_for_user(user_id, dataset_path)
+
+    if not available_species:
+        st.sidebar.warning("No species found in dataset")
+        return None
+
+    # Option to filter or annotate all
+    filter_enabled = st.sidebar.checkbox(
+        "Filter by species",
+        value=False,
+        help="Enable to select specific species to annotate",
+    )
+
+    if not filter_enabled:
+        st.sidebar.info(f"📊 Annotating all {len(available_species)} species")
+        return None
+
+    # Get display names for species in selected language
+    display_name_map = get_species_display_names(available_species, language_code)
+    # display_name_map is {display_name: scientific_name}
+    display_options = sorted(display_name_map.keys())
+
+    # Multi-select for species (shows display names)
+    selected_display_names = st.sidebar.multiselect(
+        "Select species to annotate:",
+        options=display_options,
+        default=[],
+        help="Choose which species you want to focus on",
+        placeholder="Select species...",
+    )
+
+    if selected_display_names:
+        # Convert display names back to scientific names
+        selected_species = [display_name_map[dn] for dn in selected_display_names]
+        st.sidebar.success(f"✅ Filtering to {len(selected_species)} species")
+        return selected_species
+    else:
+        st.sidebar.warning("⚠️ Select at least one species or disable filter")
+        return None
+
+
 def get_pro_user_selections():
     """Get user selections for Expert mode.
-    Returns dict with dataset, user_id and language_code, or None.
+    Returns dict with dataset, user_id, species_filter and language_code, or None.
     """
     # Step 1: Dataset selection
     is_dataset_selected, dataset_path = render_dataset_selection()
@@ -123,6 +183,7 @@ def get_pro_user_selections():
     st.sidebar.markdown("---")
     st.sidebar.info(f"👤 **User:** {user_id}")
 
+    # Step 3: Language selection (before species filter so it affects display)
     selected_language = st.sidebar.selectbox(
         "Species Name Language",
         options=["Scientific Names"] + list(LANGUAGE_MAPPING.keys()),
@@ -135,9 +196,13 @@ def get_pro_user_selections():
         else LANGUAGE_MAPPING[selected_language]
     )
 
+    # Step 4: Species filter (optional, uses selected language)
+    species_filter = render_species_filter(user_id, dataset_path, language_code)
+
     return {
         "dataset_path": dataset_path,
         "user_id": user_id,
+        "species_filter": species_filter,
         "confidence_threshold": 0.0,
         "language_code": language_code,
     }

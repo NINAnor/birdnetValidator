@@ -104,6 +104,26 @@ def get_top_species_for_database(dataset_path):
     return [row[0] for row in conn.execute(query).fetchall()]
 
 
+@st.cache_data(ttl=300)
+def get_species_for_user(user_id, dataset_path):
+    """Get unique species available for a user in the dataset.
+
+    Returns list of species names sorted alphabetically.
+    """
+    conn = get_duckdb_connection()
+    query = f"""
+    SELECT DISTINCT unnest("scientific name") as species
+    FROM '{dataset_path}'
+    WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)
+    ORDER BY species
+    """
+    try:
+        results = conn.execute(query, [user_id]).fetchall()
+        return [row[0] for row in results]
+    except Exception:
+        return []
+
+
 @st.cache_data(
     ttl=1800, show_spinner="Loading assigned clips..."
 )  # Cache for 10 minutes
@@ -233,8 +253,14 @@ def _get_validated_clips_with_session(user_id, dataset_path):
     return validated_clips
 
 
-def get_random_assigned_clip(user_id, dataset_path):
+def get_random_assigned_clip(user_id, dataset_path, species_filter=None):
     """Get next unvalidated clip for user from the selected dataset.
+
+    Args:
+        user_id: User ID to filter by
+        dataset_path: S3 path to the parquet dataset
+        species_filter: Optional list of species to filter by
+
     Uses deterministic ordering (filename, start_time).
     Returns dict with clip info, or 'all_validated': True if done.
     """
@@ -256,18 +282,33 @@ def get_random_assigned_clip(user_id, dataset_path):
         exclusion_clause = ""
         exclusion_params = []
 
+    # Build species filter clause
+    if species_filter:
+        species_placeholders = ",".join(["?" for _ in species_filter])
+        species_clause = (
+            f'AND len(list_filter("scientific name", '
+            f"x -> x IN ({species_placeholders}))) > 0"
+        )
+        species_params = list(species_filter)
+    else:
+        species_clause = ""
+        species_params = []
+
     query = f"""
     SELECT fullPath, deployment_id, "start time", "scientific name",
            confidence, userID
     FROM '{dataset_path}'
     WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)
     {exclusion_clause}
+    {species_clause}
     ORDER BY fullPath, "start time"
     LIMIT 1
     """
 
     try:
-        result = conn.execute(query, [user_id] + exclusion_params).fetchone()
+        result = conn.execute(
+            query, [user_id] + exclusion_params + species_params
+        ).fetchone()
 
         if result:
             return {
@@ -280,11 +321,15 @@ def get_random_assigned_clip(user_id, dataset_path):
                 "all_validated": False,
             }
         else:
-            query = (
+            # Check if there are any clips at all for this user (with species filter)
+            count_query = (
                 f"SELECT COUNT(*) FROM '{dataset_path}' "
-                "WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR)"
+                f"WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR) "
+                f"{species_clause}"
             )
-            total = conn.execute(query, [user_id]).fetchone()[0]
+            total = conn.execute(
+                count_query, [user_id] + species_params
+            ).fetchone()[0]
 
             if total > 0:
                 return {"all_validated": True, "total_clips": total}
@@ -296,8 +341,14 @@ def get_random_assigned_clip(user_id, dataset_path):
 
 
 @st.cache_data
-def get_remaining_pro_clips_count(user_id, dataset_path):
+def get_remaining_pro_clips_count(user_id, dataset_path, species_filter=None):
     """Get count of remaining unvalidated clips for user in the selected dataset.
+
+    Args:
+        user_id: User ID to filter by
+        dataset_path: S3 path to the parquet dataset
+        species_filter: Optional list of species to filter by
+
     Uses DuckDB COUNT for performance.
     """
     conn = get_duckdb_connection()
@@ -318,14 +369,29 @@ def get_remaining_pro_clips_count(user_id, dataset_path):
         exclusion_clause = ""
         exclusion_params = []
 
+    # Build species filter clause
+    if species_filter:
+        species_placeholders = ",".join(["?" for _ in species_filter])
+        species_clause = (
+            f'AND len(list_filter("scientific name", '
+            f"x -> x IN ({species_placeholders}))) > 0"
+        )
+        species_params = list(species_filter)
+    else:
+        species_clause = ""
+        species_params = []
+
     query = (
         f"SELECT COUNT(*) FROM '{dataset_path}' "
         f"WHERE CAST(userID AS VARCHAR) = CAST(? AS VARCHAR) "
-        f"{exclusion_clause}"
+        f"{exclusion_clause} "
+        f"{species_clause}"
     )
 
     try:
-        result = conn.execute(query, [user_id] + exclusion_params).fetchone()
+        result = conn.execute(
+            query, [user_id] + exclusion_params + species_params
+        ).fetchone()
         return result[0] if result else 0
     except Exception:
         return 0
