@@ -7,9 +7,8 @@ import streamlit as st
 from ui.ui_utils import (
     clear_cache_functions,
     render_all_validated_message,
-    render_audio_player,
     render_clip_metadata,
-    render_spectrogram,
+    render_synced_audio_spectrogram,
 )
 
 
@@ -90,8 +89,7 @@ def render_pro_clip_section(result, selections):
         clip = extract_clip(full_path, result["start_time"])
 
         render_clip_metadata(result)
-        render_audio_player(clip)
-        render_spectrogram(full_path, result["start_time"], expanded=True)
+        render_synced_audio_spectrogram(full_path, result["start_time"], clip)
         render_pro_load_new_button()
 
     # Prefetch the next clip's audio and spectrogram into cache
@@ -132,6 +130,11 @@ def render_pro_load_new_button():
                 )
 
         st.session_state.expert_current_clip = None
+
+        # Increment form key to reset validation form fields
+        st.session_state.expert_form_key = (
+            st.session_state.get("expert_form_key", 0) + 1
+        )
 
         from database.queries import (
             get_assigned_clips_for_user,

@@ -66,8 +66,8 @@ def extract_clip(s3_url, start_time, sr=48000):
         try:
             s3_client.download_file(bucket, key, temp_file.name)
             audio_data, _ = librosa.load(temp_file.name, sr=sr, mono=True)
-            start_sample = int((start_time - 3) * sr)
-            end_sample = int((start_time + 6) * sr)
+            start_sample = int((start_time - 1) * sr)
+            end_sample = int((start_time + 4) * sr)
             return audio_data[start_sample:end_sample]
         finally:
             Path(temp_file.name).unlink()

@@ -47,7 +47,9 @@ def render_pro_validation_form(result, selections):
                 f"📊 Still **{remaining}** clips to annotate"
             )
 
-        with st.form("expert_validation_form"):
+        with st.form(
+            f"expert_validation_form_{st.session_state.get('expert_form_key', 0)}"
+        ):
             st.markdown("#### Species detected by BirdNET in this clip:")
             st.markdown("**Select which species you can actually hear:**")
             st.markdown("---")
@@ -122,21 +124,28 @@ def render_pro_validation_form(result, selections):
 
             user_notes = []
             noise_classes = [
+                "Loud foreground noise",
                 "Rain",
                 "Wind",
                 "Dog/Bark",
                 "Insect/Cricket",
-                "Amphibian / FrogsConstruction",
+                "Amphibian / Frogs",
+                "Construction",
                 "Human Voices",
                 "Traffic/Car",
                 "Aircraft",
+                "Water/Waves",
             ]
-            for noise in noise_classes:
-                if st.checkbox(
-                    noise,
-                    key=f"{noise}",
-                ):
-                    user_notes.append(noise)
+            mid = (len(noise_classes) + 1) // 2
+            nc1, nc2 = st.columns(2)
+            with nc1:
+                for noise in noise_classes[:mid]:
+                    if st.checkbox(noise, key=f"{noise}"):
+                        user_notes.append(noise)
+            with nc2:
+                for noise in noise_classes[mid:]:
+                    if st.checkbox(noise, key=f"{noise}"):
+                        user_notes.append(noise)
 
             st.markdown("---")
 
@@ -233,5 +242,9 @@ def _handle_pro_validation_submission(
     # Clear current clip to force loading a new one
     st.session_state.expert_current_clip = None
 
-    st.success("✅ Thank you for your annotation!")
+    # Increment form key to reset all form fields
+    st.session_state.expert_form_key = st.session_state.get("expert_form_key", 0) + 1
+
+    st.toast("✅ Annotation saved! Loading next clip...")
+    st.rerun()
     st.rerun()

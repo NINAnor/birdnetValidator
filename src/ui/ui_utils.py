@@ -35,14 +35,18 @@ def render_all_validated_message(mode_name, total_clips, extra_message=""):
 
 @st.cache_data(show_spinner=False)
 def _generate_spectrogram_image(s3_url, start_time):
-    """Generate spectrogram as PNG bytes (cached by URL + start_time)."""
+    """Generate spectrogram as PNG bytes (cached by URL + start_time).
+
+    Returns (png_bytes, axes_left_frac, axes_right_frac) so the
+    playback cursor can be aligned to the plot area.
+    """
     import io
 
     from utils import extract_clip
 
     clip = extract_clip(s3_url, start_time)
     if clip is None:
-        return None
+        return None, 0, 1
 
     fig, ax = plt.subplots(figsize=(10, 4))
     Pxx, freqs, bins, im = ax.specgram(
@@ -56,22 +60,126 @@ def _generate_spectrogram_image(s3_url, start_time):
     ax.set_ylabel("Frequency (Hz)")
     ax.set_xlabel("Time (s)")
     ax.set_ylim(0, 12000)
+
+    # Mark the 3s BirdNET detection window (1s to 4s in the 5s clip)
+    ax.axvline(x=1.0, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
+    ax.axvline(x=4.0, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
+
     plt.colorbar(im, ax=ax, label="Intensity (dB)")
     plt.tight_layout()
+
+    # Get axes position as fraction of figure width
+    bbox = ax.get_position()
+    axes_left = bbox.x0
+    axes_right = bbox.x1
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=100)
     plt.close(fig)
     buf.seek(0)
-    return buf.getvalue()
+    return buf.getvalue(), axes_left, axes_right
+
+
+def render_synced_audio_spectrogram(s3_url, start_time, clip, expanded=True):
+    """Render audio player + spectrogram with a synchronized playback cursor."""
+    import base64
+    import io
+
+    import soundfile as sf
+    import streamlit.components.v1 as components
+
+    img_data = _generate_spectrogram_image(s3_url, start_time)
+    if img_data is None or img_data[0] is None:
+        st.warning("Could not generate spectrogram")
+        render_audio_player(clip)
+        return
+
+    img_bytes, axes_left, axes_right = img_data
+
+    # Encode spectrogram image as base64
+    img_b64 = base64.b64encode(img_bytes).decode()
+
+    # Encode audio clip as base64 WAV
+    wav_buf = io.BytesIO()
+    sf.write(wav_buf, clip, 48000, format="WAV")
+    wav_buf.seek(0)
+    audio_b64 = base64.b64encode(wav_buf.read()).decode()
+
+    # Compute clip duration
+    duration = len(clip) / 48000
+
+    # Build the HTML component
+    html = f"""
+    <div id="spec-container"
+         style="position:relative; width:100%; margin-bottom:8px;">
+      <img id="spec-img" src="data:image/png;base64,{img_b64}"
+           style="width:100%; display:block;" />
+      <div id="cursor"
+           style="position:absolute; top:0; bottom:0; width:2px;
+                  background:rgba(255,255,255,0.85); pointer-events:none;
+                  display:none; z-index:10;"></div>
+    </div>
+    <audio id="player" controls
+           style="width:100%; outline:none;"
+           src="data:audio/wav;base64,{audio_b64}">
+    </audio>
+    <p style="color:#888; font-size:0.82em; margin-top:4px;">
+      🔴 Red dashed lines mark the 3-second BirdNET detection window.
+      Focus your validation there — surrounding audio is context only.
+    </p>
+    <script>
+    (function() {{
+      const player = document.getElementById('player');
+      const cursor = document.getElementById('cursor');
+      const img    = document.getElementById('spec-img');
+      const duration = {duration};
+      const axL = {axes_left};
+      const axR = {axes_right};
+      let raf = null;
+
+      function update() {{
+        if (player.paused && !player.seeking) {{
+          cursor.style.display = 'none';
+          raf = null;
+          return;
+        }}
+        const frac = player.currentTime / duration;
+        const pxLeft = (axL + frac * (axR - axL)) * img.clientWidth;
+        cursor.style.left = pxLeft + 'px';
+        cursor.style.display = 'block';
+        raf = requestAnimationFrame(update);
+      }}
+
+      player.addEventListener('play',    () => {{ if (!raf) update(); }});
+      player.addEventListener('seeked',  () => {{
+        const frac = player.currentTime / duration;
+        const pxLeft = (axL + frac * (axR - axL)) * img.clientWidth;
+        cursor.style.left = pxLeft + 'px';
+        cursor.style.display = 'block';
+        if (!player.paused && !raf) update();
+      }});
+      player.addEventListener('pause',   () => {{ /* keep cursor visible */ }});
+      player.addEventListener('ended',   () => {{ cursor.style.display = 'none'; }});
+    }})();
+    </script>
+    """
+
+    # Estimate required height (image ~400px + audio controls ~60px + text)
+    components.html(html, height=500, scrolling=False)
 
 
 def render_spectrogram(s3_url, start_time, expanded=False):
-    """Render audio spectrogram."""
+    """Render audio spectrogram (standalone, without sync)."""
     with st.expander("📊 Spectrogram", expanded=expanded):
-        img_bytes = _generate_spectrogram_image(s3_url, start_time)
+        img_data = _generate_spectrogram_image(s3_url, start_time)
+        img_bytes = img_data[0] if img_data else None
         if img_bytes:
             st.image(img_bytes, use_container_width=True)
+            st.caption(
+                "🔴 Red lines mark the 3-second BirdNET detection. "
+                "Focus your validation there — the surrounding audio "
+                "is for context only."
+            )
         else:
             st.warning("Could not generate spectrogram")
 
