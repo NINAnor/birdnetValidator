@@ -7,8 +7,8 @@ and submission of validation responses.
 
 import pandas as pd
 import streamlit as st
-
 from queries import get_all_clips_for_species, get_remaining_clips_count
+
 from utils import save_validation_response
 
 

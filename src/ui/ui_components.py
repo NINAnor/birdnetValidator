@@ -7,8 +7,9 @@ import streamlit as st
 from ui.ui_utils import (
     clear_cache_functions,
     render_all_validated_message,
+    render_audio_player,
     render_clip_metadata,
-    render_synced_audio_spectrogram,
+    render_spectrogram,
 )
 
 
@@ -89,7 +90,8 @@ def render_pro_clip_section(result, selections):
         clip = extract_clip(full_path, result["start_time"])
 
         render_clip_metadata(result)
-        render_synced_audio_spectrogram(full_path, result["start_time"], clip)
+        render_audio_player(clip)
+        render_spectrogram(full_path, result["start_time"], expanded=True)
         render_pro_load_new_button()
 
     # Prefetch the next clip's audio and spectrogram into cache

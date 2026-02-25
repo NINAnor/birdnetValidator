@@ -152,6 +152,7 @@ def render_load_new_button():
         st.session_state.clip_params = None
         st.session_state.clip_queue = []  # Clear clip queue
         from queries import get_all_clips_for_species
+
         from utils import get_validated_clips
 
         get_validated_clips.clear()
