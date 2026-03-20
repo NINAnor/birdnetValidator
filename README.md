@@ -1,72 +1,50 @@
-# TABMON Listening Lab
+# BirdNET Validator
 
-This repository contains the source code for the TABMON Listening Lab, an interactive web application designed to help users annotate acoustic data collected by the [TABMON project](https://tabmon-eu.nina.no/).
+A Streamlit web application for validating bird species detections made by [BirdNET](https://birdnet.cornell.edu/). Upload a ZIP file containing your audio recordings and BirdNET result files, then listen to each detection and confirm or reject species identifications.
 
 ## Features
 
-The application supports **two modes**:
+- **Local-first** — no cloud services required, everything runs on your machine
+- **ZIP upload** — bundle your audio files and BirdNET `.txt` results into a single ZIP
+- **Audio player & spectrogram** — listen to clips and visually inspect detections
+- **Confidence & species filters** — focus on the detections that matter
+- **Validation form** — confirm species, flag noise, rate your confidence
+- **CSV export** — download all your validations as a CSV file
 
-### 🎵 Normal Mode
-- Open access for all users
-- Random clip selection and validation
-- Simple Yes/No/Unsure validation
-- Country → Site → Species selection
-- Perfect for crowd-sourced validation
+## Getting Started
 
-## How it works
+### 1. Prepare your data
 
-The TABMON Listening Lab connects to an S3 storage that hosts the audio data and the results from the AI models used to classify the bird songs. The audio data is presented to the users in the form of short audio clips (3 seconds) along with the AI model predictions. Users can listen to the audio clips and provide their annotations regarding the presence of bird species.
+Create a ZIP file containing:
 
-### Architecture
+- **Audio files** (`.wav`, `.flac`, `.mp3`, `.ogg`)
+- **BirdNET result files** (`.txt`, tab-separated) — the standard output format from BirdNET Analyzer
 
-```mermaid
-graph TB
-    User[👤 User] --> |Selects parameters| Dashboard[🖥️ Streamlit Dashboard]
+The result files must contain at least these columns: `Begin Time (s)`, `Common Name`, `Confidence`, `Begin Path`.
 
-    Dashboard --> |Query metadata| DuckDB[🦆 DuckDB + httpfs]
-    DuckDB --> |Read parquet files| S3_Data[(☁️ S3 Storage<br/>Parquet Files)]
-
-    Dashboard --> |Request audio file| S3Search[🔍 S3 File Search]
-    S3Search --> |List objects| S3_Audio[(☁️ S3 Storage<br/>Audio Files)]
-    S3Search --> |Return file path| Dashboard
-
-    Dashboard --> |Download & extract| AudioProcessor[🎵 Audio Processor<br/>librosa]
-    S3_Audio --> |Download file| AudioProcessor
-    AudioProcessor --> |3-second clip| Dashboard
-
-    Dashboard --> |Display| User
-    User --> |Validate| ValidationForm[✅ Validation Form]
-    ValidationForm --> |Save response| S3_Validation[(☁️ S3 Storage<br/>validation_responses.csv)]
-
-    DuckDB -.-> |Read validations| S3_Validation
-
-    style Dashboard fill:#e1f5ff
-    style DuckDB fill:#fff4e1
-    style AudioProcessor fill:#ffe1f5
-    style S3_Data fill:#e8f5e8
-    style S3_Audio fill:#e8f5e8
-    style S3_Validation fill:#e8f5e8
-```
-
-### Setup
-
-1. Clone the repository:
+### 2. Run the app
 
 ```bash
-git clone https://github.com/NINAnor/tabmon_species_api.git
+docker compose up --build
 ```
 
-2. Change the `.env` file and the `src/config.py` to set your S3 credentials and parameters
+Then open [http://localhost:8501](http://localhost:8501) in your browser.
 
-3. Run the container:
+### 3. Validate
+
+1. Upload your ZIP file via the sidebar
+2. Adjust confidence threshold and species filters as needed
+3. Listen to each clip, check the spectrogram, and submit your validation
+4. Download your results as CSV when done
+
+## Development
+
+If you want to run outside Docker:
 
 ```bash
-docker compose up --build -d
+uv run streamlit run src/dashboard.py --server.maxUploadSize 1024
 ```
 
-> [!WARNING]
-> The `PARQUET_DATASET` and `SITE_INFO_S3_PATH` have a very specific format and you may need to modify the code to fit your own dataset.
+## Contact
 
-### Contact
-
-For questions or contributions, please contact me at [benjamin.cretois@nina.no](mailto:benjamin.cretois@nina.no). Feel free to open issues or pull requests on the GitHub repository.
+For questions or contributions, please contact [benjamin.cretois@nina.no](mailto:benjamin.cretois@nina.no). Feel free to open issues or pull requests.
