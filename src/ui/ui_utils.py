@@ -19,9 +19,9 @@ def setup_page_config():
 
 def render_sidebar_logo():
     """Render the TABMON logo in the sidebar."""
-    logo_path = Path("/app/assets/logo.png")
+    logo_path = Path(__file__).parent.parent.parent / "assets" / "logo.png"
     if logo_path.exists():
-        st.sidebar.image(logo_path, width=300)
+        st.sidebar.image(str(logo_path), width=300)
         st.sidebar.markdown("---")
 
 

@@ -12,7 +12,7 @@ def initialize_local_session():
 
     defaults = {
         "local_current_clip": None,
-        "local_uploaded_filename": None,
+        "local_path_key": None,
         "local_data": None,
         "local_clips": [],
         "local_validated_clips": set(),

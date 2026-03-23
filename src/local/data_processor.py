@@ -1,8 +1,6 @@
-"""Local data processing - zip upload and BirdNET result parsing."""
+"""Local data processing - directory scanning and BirdNET result parsing."""
 
 import os
-import tempfile
-import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -16,22 +14,16 @@ BIRDNET_REQUIRED_COLUMNS = {
 }
 
 
-def process_uploaded_zip(uploaded_file):
-    """Extract zip file and process BirdNET results + audio files.
+def process_local_directories(audio_dir, results_dir):
+    """Scan directories for audio files and BirdNET results.
 
-    Returns dict with extract_dir, audio_files mapping, clips list, and total count.
+    Returns dict with audio_files mapping, clips list, and total count.
     """
-    extract_dir = Path(tempfile.mkdtemp(prefix="birdnet_validator_"))
-
-    with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-        zip_ref.extractall(extract_dir)
-
-    audio_files = _find_audio_files(extract_dir)
-    result_files = _find_result_files(extract_dir)
+    audio_files = _find_audio_files(audio_dir)
+    result_files = _find_result_files(results_dir)
     clips = _parse_birdnet_results(result_files, audio_files)
 
     return {
-        "extract_dir": str(extract_dir),
         "audio_files": audio_files,
         "clips": clips,
         "total_clips": len(clips),

@@ -1,61 +1,100 @@
 """Local Mode Selection Handlers.
 
-Manages zip file upload, confidence threshold filtering,
+Manages directory path inputs, confidence threshold filtering,
 and species selection for local validation mode.
 """
 
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 
-from local.data_processor import get_unique_species, process_uploaded_zip
+from local.data_processor import get_unique_species, process_local_directories
 from ui.ui_utils import render_sidebar_logo
 
+VALIDATIONS_FILENAME = "birdnet_validations.csv"
 
-def render_local_upload():
-    """Render zip file uploader in sidebar.
 
-    Returns True if data has been uploaded and processed.
+def _load_existing_validations(output_dir):
+    """Load previous validations from the output directory if they exist."""
+    csv_path = Path(output_dir) / VALIDATIONS_FILENAME
+    if not csv_path.is_file():
+        return
+
+    df = pd.read_csv(csv_path)
+    st.session_state.local_validations = df.to_dict("records")
+
+    # Support both old CSVs (filename only) and new ones (filepath column)
+    path_col = "filepath" if "filepath" in df.columns else "filename"
+    st.session_state.local_validated_clips = {
+        (row[path_col], row["start_time"]) for _, row in df.iterrows()
+    }
+
+
+def render_local_data_loader():
+    """Load data from directories configured in .env.
+
+    Returns True if data has been loaded successfully.
     """
+    from config import AUDIO_DIR, OUTPUT_DIR, RESULTS_DIR
+
     render_sidebar_logo()
-    st.sidebar.header("📁 Upload Data")
+    st.sidebar.header("📁 Data")
 
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload a ZIP file with audio files and BirdNET results",
-        type=["zip"],
-        help=(
-            "The ZIP should contain audio files (.wav, .flac, .mp3, .ogg) "
-            "and BirdNET result files (.txt, tab-separated)"
-        ),
-    )
-
-    if uploaded_file is None:
+    if not AUDIO_DIR or not RESULTS_DIR or not OUTPUT_DIR:
+        st.sidebar.error(
+            "❌ Missing paths in `.env` file.\n\n"
+            "Set `AUDIO_DIR`, `RESULTS_DIR`, and `OUTPUT_DIR`."
+        )
         return False
 
-    # Only reprocess if a different file was uploaded
+    audio_dir = AUDIO_DIR
+    results_dir = RESULTS_DIR
+    output_dir = OUTPUT_DIR
+
+    audio_path = Path(audio_dir)
+    results_path = Path(results_dir)
+    output_path = Path(output_dir)
+
+    if not audio_path.is_dir():
+        st.sidebar.error(f"❌ Directory not found: `{audio_dir}`")
+        return False
+
+    if not results_path.is_dir():
+        st.sidebar.error(f"❌ Directory not found: `{results_dir}`")
+        return False
+
+    # Create output directory if it doesn't exist
+    output_path.mkdir(parents=True, exist_ok=True)
+    st.session_state.local_output_dir = output_dir
+
+    # Only reprocess if paths changed
+    current_key = (audio_dir, results_dir)
     if (
-        "local_uploaded_filename" not in st.session_state
-        or st.session_state.local_uploaded_filename != uploaded_file.name
+        "local_path_key" not in st.session_state
+        or st.session_state.local_path_key != current_key
     ):
-        with st.spinner("Processing uploaded data..."):
-            data = process_uploaded_zip(uploaded_file)
+        with st.spinner("Loading data..."):
+            data = process_local_directories(audio_dir, results_dir)
 
         if not data["clips"]:
-            st.sidebar.error(
-                "❌ No valid BirdNET detections found in the ZIP file."
-            )
+            st.sidebar.error("❌ No valid BirdNET detections found.")
             st.sidebar.info(
-                "Make sure the ZIP contains:\n"
+                "Make sure the directories contain:\n"
                 "- Audio files (.wav, .flac, .mp3, .ogg)\n"
                 "- BirdNET result files (.txt, tab-separated)"
             )
             return False
 
-        st.session_state.local_uploaded_filename = uploaded_file.name
+        st.session_state.local_path_key = current_key
         st.session_state.local_data = data
         st.session_state.local_clips = data["clips"]
         st.session_state.local_current_clip = None
         st.session_state.local_validated_clips = set()
         st.session_state.local_validations = []
-        st.rerun()
+
+        # Restore previous validations from output dir
+        _load_existing_validations(output_dir)
 
     st.sidebar.success(
         f"✅ Loaded **{st.session_state.local_data['total_clips']}** clips"
@@ -123,9 +162,9 @@ def get_local_user_selections():
 
     Returns dict with confidence_threshold and species_filter, or None.
     """
-    is_uploaded = render_local_upload()
+    data_ready = render_local_data_loader()
 
-    if not is_uploaded:
+    if not data_ready:
         return None
 
     confidence_threshold = render_local_confidence_filter()

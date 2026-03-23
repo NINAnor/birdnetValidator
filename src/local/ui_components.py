@@ -11,10 +11,9 @@ from ui.ui_utils import (
 
 def render_local_page_header():
     """Render local mode page header."""
-    st.title("🐦 BirdNET Validator - Local Mode", text_alignment="center")
+    st.title("🐦 BirdNET Validator", text_alignment="center")
     st.markdown(
-        "Upload a ZIP file containing audio files and BirdNET result files "
-        "to validate species detections locally.",
+        "Validate bird species detections from BirdNET.",
         text_alignment="center",
     )
 
@@ -25,9 +24,9 @@ def render_local_help_section():
         st.markdown("""### 📖 How to use
 
 **Getting Started:**
-1. **Prepare** a ZIP file with your audio files and BirdNET `.txt` result files
-2. **Upload** the ZIP via the sidebar
-3. **Adjust** the confidence threshold and species filters as needed
+1. Copy `.env.example` to `.env` and set your three directory paths
+2. Run the app with `uv run streamlit run src/dashboard.py`
+3. **Adjust** the confidence threshold and species filters in the sidebar
 
 **Validation Process:**
 1. **Listen** to each audio clip
@@ -132,4 +131,4 @@ def render_local_empty_placeholder():
     """Render placeholder when no clip is loaded."""
     with st.container(border=True):
         st.markdown("### 🎯 Validation")
-        st.info("📁 Please upload a ZIP file to start validating clips.")
+        st.info("📁 Set AUDIO_DIR, RESULTS_DIR, and OUTPUT_DIR in your .env file.")

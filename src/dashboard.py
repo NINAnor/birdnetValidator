@@ -29,7 +29,7 @@ def main():
         col1, col2 = st.columns([1, 1])
         with col1:
             st.container(border=True).info(
-                "📁 Upload a ZIP file to start validating"
+                "📁 Set AUDIO_DIR, RESULTS_DIR, and OUTPUT_DIR in your .env file, then restart the app."
             )
         with col2:
             render_local_empty_placeholder()

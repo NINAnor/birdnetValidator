@@ -1,8 +1,11 @@
 """Local Mode Validation Handlers."""
 
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
+from local.selection_handlers import VALIDATIONS_FILENAME
 from utils import load_species_translations
 
 
@@ -161,6 +164,7 @@ def _handle_local_submission(
         return value
 
     validation = {
+        "filepath": result["filename"],
         "filename": result.get("audio_basename", result["filename"]),
         "start_time": result["start_time"],
         "end_time": result["end_time"],
@@ -180,6 +184,14 @@ def _handle_local_submission(
     if "local_validations" not in st.session_state:
         st.session_state.local_validations = []
     st.session_state.local_validations.append(validation)
+
+    # Persist to disk
+    output_dir = st.session_state.get("local_output_dir")
+    if output_dir:
+        csv_path = Path(output_dir) / VALIDATIONS_FILENAME
+        pd.DataFrame(st.session_state.local_validations).to_csv(
+            csv_path, index=False
+        )
 
     # Mark clip as validated
     if "local_validated_clips" not in st.session_state:
