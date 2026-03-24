@@ -1,6 +1,10 @@
-# BirdNET Validator
+# BirdValidator
 
-A Streamlit web application for **validating** bird species detections made by [BirdNET](https://birdnet.cornell.edu/) or [PERCH](https://github.com/google-research/perch). This is **not** a detection tool — you must first run **BirdNET** or other model with similar output on your audio recordings to produce result files. Once you have those results, point this app at your audio and result directories (locally or on S3), then listen to each detection and confirm or reject species identifications.
+A Streamlit web application for **validating** bird species detections made by [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer). This is **not** a detection tool — you must first run **BirdNET** or other model with similar output on your audio recordings to produce result files. Once you have those results, point this app at your audio and result directories (locally or on S3), then listen to each detection and confirm or reject species identifications.
+
+<p align="center">
+  <img src="assets/screenshot_app.png" width="800" alt="Screenshot">
+</p>
 
 ## Features
 
@@ -13,13 +17,20 @@ A Streamlit web application for **validating** bird species detections made by [
 
 ## Getting Started
 
-### 1. Install dependencies
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/NINAnor/birdnetValidator.git
+cd birdnetValidator
+```
+
+### 2. Install dependencies
 
 ```bash
 uv sync
 ```
 
-### 2. Configure paths
+### 3. Configure paths
 
 Copy the example environment file and edit it with your paths:
 
@@ -43,7 +54,7 @@ S3_ACCESS_KEY=your-access-key
 S3_SECRET_KEY=your-secret-key
 ```
 
-### 3. Run the app
+### 4. Run the app
 
 ```bash
 uv run streamlit run src/dashboard.py
@@ -51,7 +62,7 @@ uv run streamlit run src/dashboard.py
 
 Then open [http://localhost:8501](http://localhost:8501) in your browser.
 
-### 4. Validate
+### 5. Validate
 
 1. Adjust confidence threshold and species filters in the sidebar
 2. Listen to each clip, check the spectrogram, and submit your validation
@@ -98,9 +109,13 @@ To divide the workload efficiently:
 
 ## Docker
 
+The app can be containerised for deployment on a shared server, so multiple annotators can access it from their browser without installing anything locally. Build and run with:
+
 ```bash
 docker compose up --build
 ```
+
+Configure paths and S3 credentials via environment variables in `docker-compose.yml` or a `.env` file mounted into the container.
 
 ## Contact
 

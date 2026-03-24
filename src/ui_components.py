@@ -17,7 +17,7 @@ from utils import extract_clip
 def setup_page_config():
     """Configure Streamlit page settings."""
     st.set_page_config(
-        page_title="BirdValidator",
+        page_title="BirdNET Validator",
         layout="wide",
         initial_sidebar_state="expanded",
         page_icon="🐦",
@@ -25,7 +25,7 @@ def setup_page_config():
 
 
 def render_sidebar_logo():
-    """Render the TABMON logo in the sidebar."""
+    """Render the BirdValidator logo in the sidebar."""
     logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
     if logo_path.exists():
         st.sidebar.image(str(logo_path), width=300)

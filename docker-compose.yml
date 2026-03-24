@@ -12,5 +12,7 @@ services:
     <<: *default-common-deployment
     build:
       context: .
+    env_file:
+      - .env
     ports:
       - "8501:8501"
