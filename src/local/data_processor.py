@@ -77,43 +77,6 @@ def _read_result_file(result_file):
     return pd.read_csv(result_file, sep="\t")
 
 
-def process_local_directories(audio_dir, results_dir):
-    """Scan directories for audio files and BirdNET results.
-
-    Returns dict with audio_files mapping, clips list, and total count.
-    """
-    audio_files = _find_audio_files(audio_dir)
-    result_files = _find_result_files(results_dir)
-    clips = _parse_birdnet_results(result_files, audio_files)
-
-    return {
-        "audio_files": audio_files,
-        "clips": clips,
-        "total_clips": len(clips),
-    }
-
-
-def _find_audio_files(root_dir):
-    """Find all audio files and return dict mapping basename -> local path."""
-    audio_map = {}
-    for root, _, files in os.walk(root_dir):
-        for filename in files:
-            if Path(filename).suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS:
-                full_path = str(Path(root) / filename)
-                audio_map[filename] = full_path
-    return audio_map
-
-
-def _find_result_files(root_dir):
-    """Find all potential BirdNET result .txt files."""
-    result_files = []
-    for root, _, files in os.walk(root_dir):
-        for filename in files:
-            if filename.endswith(".txt"):
-                result_files.append(str(Path(root) / filename))
-    return result_files
-
-
 def _parse_birdnet_results(result_files, audio_files):
     """Parse BirdNET result files and create grouped clip list.
 

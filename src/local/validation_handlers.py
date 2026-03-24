@@ -22,9 +22,10 @@ def render_local_validation_form(result, selections):
     with st.container(border=True):
         st.markdown("### 🎯 Validation")
 
-        remaining = result.get("remaining", 0)
-        if remaining:
-            st.info(f"📊 **{remaining}** clips remaining")
+        validated_count = result.get("validated_count", 0)
+        total_filtered = result.get("total_filtered", 0)
+        if total_filtered:
+            st.info(f"📊 **{validated_count}** out of **{total_filtered}** clips validated")
 
         form_key = st.session_state.get("local_form_key", 0)
 

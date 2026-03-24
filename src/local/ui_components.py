@@ -77,9 +77,10 @@ def render_local_clip_section(result, selections):
             f"`{result['start_time']}s - {result['end_time']}s`"
         )
 
-        remaining = result.get("remaining")
-        if remaining is not None:
-            st.markdown(f"**📊 Remaining:** `{remaining}` clips")
+        validated_count = result.get("validated_count")
+        total_filtered = result.get("total_filtered")
+        if total_filtered is not None:
+            st.markdown(f"**📊 Progress:** `{validated_count}` / `{total_filtered}` clips validated")
 
         render_audio_player(clip)
         render_spectrogram(filepath, result["start_time"], expanded=True)
@@ -92,13 +93,13 @@ def _render_local_navigation_button():
     """Render skip/next clip button."""
     if st.button(
         "🔄 Skip / Load Next Clip",
-        help="Skip this clip and load the next one",
+        help="Skip this clip for now — it will come back after the others",
     ):
         current_clip = st.session_state.get("local_current_clip")
         if current_clip and not current_clip.get("all_validated"):
-            if "local_validated_clips" not in st.session_state:
-                st.session_state.local_validated_clips = set()
-            st.session_state.local_validated_clips.add(
+            if "local_skipped_clips" not in st.session_state:
+                st.session_state.local_skipped_clips = set()
+            st.session_state.local_skipped_clips.add(
                 (current_clip["filename"], current_clip["start_time"])
             )
 

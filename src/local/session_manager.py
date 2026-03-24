@@ -57,6 +57,7 @@ def get_or_load_local_clip(selections):
     """
     filtered_clips = _get_filtered_clips(selections)
     validated = st.session_state.get("local_validated_clips", set())
+    skipped = st.session_state.get("local_skipped_clips", set())
 
     unvalidated = [
         clip
@@ -72,14 +73,32 @@ def get_or_load_local_clip(selections):
 
     # Return current clip if it's still valid
     current = st.session_state.get("local_current_clip")
+    total_filtered = len(filtered_clips)
+    validated_count = total_filtered - len(unvalidated)
+
     if current and not current.get("all_validated"):
         if (current["filename"], current["start_time"]) not in validated:
             current["remaining"] = len(unvalidated)
+            current["total_filtered"] = total_filtered
+            current["validated_count"] = validated_count
             return current
 
-    # Load next unvalidated clip
-    clip = unvalidated[0]
-    clip["all_validated"] = False
-    clip["remaining"] = len(unvalidated)
-    st.session_state.local_current_clip = clip
-    return clip
+    # Prefer unskipped clips; fall back to skipped ones when all others are done
+    unskipped = [
+        clip
+        for clip in unvalidated
+        if (clip["filename"], clip["start_time"]) not in skipped
+    ]
+    if unskipped:
+        next_clip = unskipped[0]
+    else:
+        # All remaining clips were skipped — reset skips and cycle back
+        st.session_state.local_skipped_clips = set()
+        next_clip = unvalidated[0]
+
+    next_clip["all_validated"] = False
+    next_clip["remaining"] = len(unvalidated)
+    next_clip["total_filtered"] = total_filtered
+    next_clip["validated_count"] = validated_count
+    st.session_state.local_current_clip = next_clip
+    return next_clip
