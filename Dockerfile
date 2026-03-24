@@ -1,19 +1,5 @@
 FROM python:3.12-slim
 
-# Install rclone and fuse
-RUN apt-get update && apt-get install -y \
-    fuse \
-    curl \
-    unzip \
-    && curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip \
-    && unzip rclone-current-linux-amd64.zip \
-    && cp rclone-*/rclone /usr/bin/ \
-    && chown root:root /usr/bin/rclone \
-    && chmod 755 /usr/bin/rclone \
-    && rm -rf rclone-* \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV UV_LINK_MODE=copy

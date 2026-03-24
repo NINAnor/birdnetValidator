@@ -1,7 +1,6 @@
-"""Utility functions for BirdNET Validator."""
+"""Utility functions — audio extraction, species translations."""
 
 import io
-import tempfile
 
 import librosa
 import pandas as pd

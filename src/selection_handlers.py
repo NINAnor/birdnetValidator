@@ -9,9 +9,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from local.data_processor import get_unique_species, process_local_directories
+from data_processor import get_unique_species, process_local_directories
 from s3_utils import is_s3_path, read_s3_text, s3_file_exists, write_s3_text
-from ui.ui_utils import render_sidebar_logo
+from ui_components import render_sidebar_logo
 
 VALIDATIONS_FILENAME = "birdnet_validations.csv"
 

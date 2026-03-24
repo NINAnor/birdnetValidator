@@ -18,20 +18,17 @@ dependencies = [
   "python-dotenv>=1.0.0",
   "streamlit>=1.52.2"
 ]
-description = ""
+description = "Streamlit app for validating BirdNET / PERCH species detections."
 license = "GPL-3.0+"
-name = "tabmon-species-api"
+name = "birdnet-validator"
 readme = "README.md"
 requires-python = ">=3.10"
 version = "0.1.0"
 
-[project.scripts]
-tabmon-species-api = "main:start"
 
 [tool.deptry]
-# Ignore local modules and unused deps
 ignore = ["DEP001", "DEP002"]
-known_first_party = ["config", "queries", "utils"]
+known_first_party = ["config", "utils", "s3_utils", "data_processor", "selection_handlers", "session_manager", "ui_components", "validation_handlers"]
 
 [tool.ruff]
 fix = true
@@ -39,8 +36,3 @@ fix = true
 [tool.ruff.lint]
 ignore = ["COM812", "S608", "S311"]
 select = ["E", "W", "I", "F", "UP", "S", "B", "A", "COM", "LOG", "PTH", "Q"]
-
-[tool.pixi.tasks]
-
-[tool.pixi.dependencies]
-xcb-util-cursor = ">=0.1.6,<0.2"

@@ -1,18 +1,18 @@
-"""BirdNET Validator - Local Mode Application."""
+"""BirdNET Validator — main application."""
 
 import streamlit as st
 
-from local.selection_handlers import get_local_user_selections
-from local.session_manager import get_or_load_local_clip, initialize_local_session
-from local.ui_components import (
+from selection_handlers import get_local_user_selections
+from session_manager import get_or_load_local_clip, initialize_local_session
+from ui_components import (
     render_local_clip_section,
     render_local_download_button,
     render_local_empty_placeholder,
     render_local_help_section,
     render_local_page_header,
+    setup_page_config,
 )
-from local.validation_handlers import render_local_validation_form
-from ui.ui_utils import setup_page_config
+from validation_handlers import render_local_validation_form
 
 
 def main():

@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from local.selection_handlers import VALIDATIONS_FILENAME
+from selection_handlers import VALIDATIONS_FILENAME
 from s3_utils import is_s3_path, write_s3_text
 from utils import load_species_translations
 
