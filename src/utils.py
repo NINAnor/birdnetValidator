@@ -16,6 +16,35 @@ def load_species_translations():
     return pd.read_csv(BIRDNET_MULTILINGUAL_PATH)
 
 
+LANGUAGE_OPTIONS = {
+    "en_uk": "English",
+    "fr": "Français",
+    "es": "Español",
+    "nl": "Nederlands",
+    "no": "Norsk",
+}
+
+
+@st.cache_data
+def _build_translation_map(language):
+    """Build a dict mapping en_uk names to the target language."""
+    df = load_species_translations()
+    if language == "en_uk" or language not in df.columns:
+        return {}
+    return dict(zip(df["en_uk"], df[language], strict=False))
+
+
+def translate_species_name(name, language):
+    """Translate an English species name to the chosen language.
+
+    Returns the original name if no translation is available.
+    """
+    if language == "en_uk":
+        return name
+    mapping = _build_translation_map(language)
+    return mapping.get(name, name)
+
+
 @st.cache_data(ttl=600, show_spinner=False)
 def extract_clip(file_path, start_time, sr=48000):
     """Extract 5-second audio clip (1s before + 4s after detection start).

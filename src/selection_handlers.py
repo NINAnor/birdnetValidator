@@ -12,6 +12,7 @@ import streamlit as st
 from data_processor import get_unique_species, process_local_directories
 from s3_utils import is_s3_path, read_s3_text, s3_file_exists, write_s3_text
 from ui_components import render_sidebar_logo
+from utils import LANGUAGE_OPTIONS, translate_species_name
 
 VALIDATIONS_FILENAME = "birdnet_validations.csv"
 
@@ -108,6 +109,21 @@ def render_local_data_loader():
     return True
 
 
+def render_language_selector():
+    """Render language selector in the sidebar."""
+    st.sidebar.markdown("---")
+    st.sidebar.header("🌐 Language")
+
+    language = st.sidebar.selectbox(
+        "Species name language",
+        options=list(LANGUAGE_OPTIONS.keys()),
+        format_func=lambda k: LANGUAGE_OPTIONS[k],
+        index=0,
+        help="Choose the language for species names",
+    )
+    return language
+
+
 def render_local_confidence_filter():
     """Render confidence range slider."""
     st.sidebar.markdown("---")
@@ -124,10 +140,10 @@ def render_local_confidence_filter():
     return confidence_range
 
 
-def render_local_species_filter():
+def render_local_species_filter(selections):
     """Render species filter multiselect.
 
-    Returns list of selected species or None for all species.
+    Returns list of selected species (English) or None for all species.
     """
     st.sidebar.markdown("---")
     st.sidebar.header("🐦 Species Filter")
@@ -137,6 +153,8 @@ def render_local_species_filter():
         return None
 
     available_species = get_unique_species(clips)
+
+    language = selections.get("language", "en_uk")
 
     filter_enabled = st.sidebar.checkbox(
         "Filter by species",
@@ -148,14 +166,20 @@ def render_local_species_filter():
         st.sidebar.info(f"📊 Showing all {len(available_species)} species")
         return None
 
-    selected = st.sidebar.multiselect(
+    display_names = [
+        translate_species_name(s, language) for s in available_species
+    ]
+    display_to_english = dict(zip(display_names, available_species, strict=False))
+
+    selected_display = st.sidebar.multiselect(
         "Select species:",
-        options=available_species,
+        options=sorted(display_names),
         default=[],
         placeholder="Select species...",
     )
 
-    if selected:
+    if selected_display:
+        selected = [display_to_english[d] for d in selected_display]
         st.sidebar.success(f"✅ Filtering to {len(selected)} species")
         return selected
 
@@ -174,9 +198,14 @@ def get_local_user_selections():
         return None
 
     confidence_range = render_local_confidence_filter()
-    species_filter = render_local_species_filter()
+    language = render_language_selector()
 
-    return {
+    selections = {
         "confidence_range": confidence_range,
-        "species_filter": species_filter,
+        "language": language,
     }
+
+    species_filter = render_local_species_filter(selections)
+    selections["species_filter"] = species_filter
+
+    return selections

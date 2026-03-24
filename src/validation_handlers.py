@@ -7,14 +7,27 @@ import streamlit as st
 
 from selection_handlers import VALIDATIONS_FILENAME
 from s3_utils import is_s3_path, write_s3_text
-from utils import load_species_translations
+from utils import load_species_translations, translate_species_name
 
 
 @st.cache_data
-def _get_all_species_list_local():
-    """Get all species English common names for autocomplete."""
+def _get_all_species_list(language):
+    """Get all species names in the chosen language for autocomplete."""
     translations_df = load_species_translations()
-    return sorted(translations_df["en_uk"].dropna().tolist())
+    if language in translations_df.columns:
+        names = translations_df[language].dropna().tolist()
+    else:
+        names = translations_df["en_uk"].dropna().tolist()
+    return sorted(names)
+
+
+@st.cache_data
+def _build_reverse_translation_map(language):
+    """Build a dict mapping translated names back to English."""
+    translations_df = load_species_translations()
+    if language not in translations_df.columns:
+        return {}
+    return dict(zip(translations_df[language], translations_df["en_uk"], strict=False))
 
 
 def render_local_validation_form(result, selections):
@@ -36,6 +49,7 @@ def render_local_validation_form(result, selections):
 
             species_list = result.get("species_array", [])
             confidence_list = result.get("confidence_array", [])
+            language = selections.get("language", "en_uk")
 
             # Sort by confidence descending
             species_data = sorted(
@@ -46,8 +60,9 @@ def render_local_validation_form(result, selections):
 
             selected_species = []
             for index, (species, confidence) in enumerate(species_data):
+                display_name = translate_species_name(species, language)
                 if st.checkbox(
-                    f"{species} (BirdNET conf: {confidence:.2f})",
+                    f"{display_name} (BirdNET conf: {confidence:.2f})",
                     key=f"local_species_{index}_{form_key}",
                 ):
                     selected_species.append(species)
@@ -66,14 +81,22 @@ def render_local_validation_form(result, selections):
             st.markdown("---")
 
             # Additional species not in BirdNET predictions
-            all_species = _get_all_species_list_local()
-            other_species = st.multiselect(
+            all_species = _get_all_species_list(language)
+            other_species_display = st.multiselect(
                 "**Other species not listed above:**",
                 options=all_species,
                 default=[],
                 placeholder="Start typing to search...",
                 key=f"local_other_{form_key}",
             )
+            # Map back to English for storage
+            if language != "en_uk":
+                reverse_map = _build_reverse_translation_map(language)
+                other_species = [
+                    reverse_map.get(name, name) for name in other_species_display
+                ]
+            else:
+                other_species = other_species_display
 
             st.markdown("---")
 
