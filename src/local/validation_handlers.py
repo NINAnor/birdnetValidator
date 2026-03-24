@@ -1,4 +1,4 @@
-"""Local Mode Validation Handlers."""
+"""Validation Handlers."""
 
 from pathlib import Path
 
@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from local.selection_handlers import VALIDATIONS_FILENAME
+from s3_utils import is_s3_path, write_s3_text
 from utils import load_species_translations
 
 
@@ -185,13 +186,18 @@ def _handle_local_submission(
         st.session_state.local_validations = []
     st.session_state.local_validations.append(validation)
 
-    # Persist to disk
+    # Persist to disk or S3
     output_dir = st.session_state.get("local_output_dir")
     if output_dir:
-        csv_path = Path(output_dir) / VALIDATIONS_FILENAME
-        pd.DataFrame(st.session_state.local_validations).to_csv(
-            csv_path, index=False
+        csv_data = pd.DataFrame(st.session_state.local_validations).to_csv(
+            index=False
         )
+        if is_s3_path(output_dir):
+            s3_uri = output_dir.rstrip("/") + "/" + VALIDATIONS_FILENAME
+            write_s3_text(s3_uri, csv_data)
+        else:
+            csv_path = Path(output_dir) / VALIDATIONS_FILENAME
+            csv_path.write_text(csv_data)
 
     # Mark clip as validated
     if "local_validated_clips" not in st.session_state:

@@ -28,16 +28,16 @@ def _get_filtered_clips(selections):
     """Get clips filtered by confidence threshold and species selection."""
     clips = st.session_state.get("local_clips", [])
 
-    confidence_threshold = selections.get("confidence_threshold", 0.0)
+    confidence_range = selections.get("confidence_range", (0.0, 1.0))
     species_filter = selections.get("species_filter")
 
     filtered = []
     for clip in clips:
-        # At least one detection must exceed the confidence threshold
+        # At least one detection must fall within the confidence range
         max_confidence = (
             max(clip["confidence_array"]) if clip["confidence_array"] else 0
         )
-        if max_confidence < confidence_threshold:
+        if max_confidence < confidence_range[0] or max_confidence > confidence_range[1]:
             continue
 
         # If species filter is set, at least one detected species must match

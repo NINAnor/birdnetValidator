@@ -1,7 +1,7 @@
-"""Local Mode Selection Handlers.
+"""Selection Handlers.
 
-Manages directory path inputs, confidence threshold filtering,
-and species selection for local validation mode.
+Manages data loading, confidence threshold filtering,
+and species selection. Supports local paths and S3 URIs.
 """
 
 from pathlib import Path
@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from local.data_processor import get_unique_species, process_local_directories
+from s3_utils import is_s3_path, read_s3_text, s3_file_exists, write_s3_text
 from ui.ui_utils import render_sidebar_logo
 
 VALIDATIONS_FILENAME = "birdnet_validations.csv"
@@ -17,14 +18,21 @@ VALIDATIONS_FILENAME = "birdnet_validations.csv"
 
 def _load_existing_validations(output_dir):
     """Load previous validations from the output directory if they exist."""
-    csv_path = Path(output_dir) / VALIDATIONS_FILENAME
-    if not csv_path.is_file():
-        return
+    if is_s3_path(output_dir):
+        s3_uri = output_dir.rstrip("/") + "/" + VALIDATIONS_FILENAME
+        if not s3_file_exists(s3_uri):
+            return
+        text = read_s3_text(s3_uri)
+        import io
 
-    df = pd.read_csv(csv_path)
+        df = pd.read_csv(io.StringIO(text))
+    else:
+        csv_path = Path(output_dir) / VALIDATIONS_FILENAME
+        if not csv_path.is_file():
+            return
+        df = pd.read_csv(csv_path)
+
     st.session_state.local_validations = df.to_dict("records")
-
-    # Support both old CSVs (filename only) and new ones (filepath column)
     path_col = "filepath" if "filepath" in df.columns else "filename"
     st.session_state.local_validated_clips = {
         (row[path_col], row["start_time"]) for _, row in df.iterrows()
@@ -52,20 +60,18 @@ def render_local_data_loader():
     results_dir = RESULTS_DIR
     output_dir = OUTPUT_DIR
 
-    audio_path = Path(audio_dir)
-    results_path = Path(results_dir)
-    output_path = Path(output_dir)
-
-    if not audio_path.is_dir():
+    # Validate local paths (S3 paths are validated when accessed)
+    if not is_s3_path(audio_dir) and not Path(audio_dir).is_dir():
         st.sidebar.error(f"❌ Directory not found: `{audio_dir}`")
         return False
 
-    if not results_path.is_dir():
+    if not is_s3_path(results_dir) and not Path(results_dir).is_dir():
         st.sidebar.error(f"❌ Directory not found: `{results_dir}`")
         return False
 
-    # Create output directory if it doesn't exist
-    output_path.mkdir(parents=True, exist_ok=True)
+    if not is_s3_path(output_dir):
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
     st.session_state.local_output_dir = output_dir
 
     # Only reprocess if paths changed
@@ -103,19 +109,19 @@ def render_local_data_loader():
 
 
 def render_local_confidence_filter():
-    """Render minimum confidence threshold slider."""
+    """Render confidence range slider."""
     st.sidebar.markdown("---")
     st.sidebar.header("🎯 Confidence Filter")
 
-    threshold = st.sidebar.slider(
-        "Minimum BirdNET confidence",
+    confidence_range = st.sidebar.slider(
+        "BirdNET confidence range",
         min_value=0.0,
         max_value=1.0,
-        value=0.1,
+        value=(0.1, 1.0),
         step=0.05,
-        help="Only show clips with at least one detection above this confidence",
+        help="Only show clips with at least one detection within this confidence range",
     )
-    return threshold
+    return confidence_range
 
 
 def render_local_species_filter():
@@ -167,10 +173,10 @@ def get_local_user_selections():
     if not data_ready:
         return None
 
-    confidence_threshold = render_local_confidence_filter()
+    confidence_range = render_local_confidence_filter()
     species_filter = render_local_species_filter()
 
     return {
-        "confidence_threshold": confidence_threshold,
+        "confidence_range": confidence_range,
         "species_filter": species_filter,
     }
