@@ -10,34 +10,57 @@ import pandas as pd
 import streamlit as st
 
 from data_processor import get_unique_species, process_local_directories
-from s3_utils import is_s3_path, read_s3_text, s3_file_exists, write_s3_text
+from s3_utils import is_s3_path, list_s3_files, read_s3_text, s3_file_exists, write_s3_text
 from ui_components import render_sidebar_logo
 from utils import LANGUAGE_OPTIONS, translate_species_name
 
-VALIDATIONS_FILENAME = "birdnet_validations.csv"
+VALIDATIONS_PREFIX = "birdnet_validations_"
 
 
-def _load_existing_validations(output_dir):
-    """Load previous validations from the output directory if they exist."""
+def _get_validations_filename(annotator):
+    """Return the CSV filename for a given annotator."""
+    return f"{VALIDATIONS_PREFIX}{annotator}.csv"
+
+
+def _load_existing_validations(output_dir, annotator):
+    """Load validations from all annotators in the output directory.
+
+    Populates local_validated_clips with clips validated by ANY annotator,
+    but only loads the current annotator's records into local_validations.
+    """
+    all_validated = set()
+    own_records = []
+
     if is_s3_path(output_dir):
-        s3_uri = output_dir.rstrip("/") + "/" + VALIDATIONS_FILENAME
-        if not s3_file_exists(s3_uri):
-            return
-        text = read_s3_text(s3_uri)
         import io
 
-        df = pd.read_csv(io.StringIO(text))
+        all_files = list_s3_files(output_dir, extension=".csv")
+        csv_files = [
+            f for f in all_files
+            if f.split("/")[-1].startswith(VALIDATIONS_PREFIX)
+        ]
+        for csv_uri in csv_files:
+            text = read_s3_text(csv_uri)
+            df = pd.read_csv(io.StringIO(text))
+            path_col = "filepath" if "filepath" in df.columns else "filename"
+            all_validated.update(
+                (row[path_col], row["start_time"]) for _, row in df.iterrows()
+            )
+            if csv_uri.split("/")[-1] == _get_validations_filename(annotator):
+                own_records = df.to_dict("records")
     else:
-        csv_path = Path(output_dir) / VALIDATIONS_FILENAME
-        if not csv_path.is_file():
-            return
-        df = pd.read_csv(csv_path)
+        output_path = Path(output_dir)
+        for csv_path in output_path.glob(f"{VALIDATIONS_PREFIX}*.csv"):
+            df = pd.read_csv(csv_path)
+            path_col = "filepath" if "filepath" in df.columns else "filename"
+            all_validated.update(
+                (row[path_col], row["start_time"]) for _, row in df.iterrows()
+            )
+            if csv_path.name == _get_validations_filename(annotator):
+                own_records = df.to_dict("records")
 
-    st.session_state.local_validations = df.to_dict("records")
-    path_col = "filepath" if "filepath" in df.columns else "filename"
-    st.session_state.local_validated_clips = {
-        (row[path_col], row["start_time"]) for _, row in df.iterrows()
-    }
+    st.session_state.local_validated_clips = all_validated
+    st.session_state.local_validations = own_records
 
 
 def render_local_data_loader():
@@ -48,6 +71,22 @@ def render_local_data_loader():
     from config import AUDIO_DIR, OUTPUT_DIR, RESULTS_DIR
 
     render_sidebar_logo()
+
+    # Annotator name (must be set before data loads)
+    st.sidebar.header("👤 Annotator")
+    annotator = st.sidebar.text_input(
+        "Your name",
+        value=st.session_state.get("annotator_name", ""),
+        placeholder="e.g. benjamin",
+        help="Used to separate your validations from other annotators",
+    )
+    if not annotator or not annotator.strip():
+        st.sidebar.warning("⚠️ Enter your name to start validating.")
+        return False
+    annotator = annotator.strip().lower().replace(" ", "_")
+    st.session_state.annotator_name = annotator
+
+    st.sidebar.markdown("---")
     st.sidebar.header("📁 Data")
 
     if not AUDIO_DIR or not RESULTS_DIR or not OUTPUT_DIR:
@@ -101,7 +140,14 @@ def render_local_data_loader():
         st.session_state.local_validations = []
 
         # Restore previous validations from output dir
-        _load_existing_validations(output_dir)
+        _load_existing_validations(output_dir, annotator)
+        st.session_state.local_annotator_key = annotator
+
+    # Reload validations if annotator changed
+    elif st.session_state.get("local_annotator_key") != annotator:
+        st.session_state.local_current_clip = None
+        _load_existing_validations(output_dir, annotator)
+        st.session_state.local_annotator_key = annotator
 
     st.sidebar.success(
         f"✅ Loaded **{st.session_state.local_data['total_clips']}** clips"

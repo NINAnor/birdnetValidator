@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from selection_handlers import VALIDATIONS_FILENAME
+from selection_handlers import VALIDATIONS_PREFIX, _get_validations_filename
 from s3_utils import is_s3_path, write_s3_text
 from utils import load_species_translations, translate_species_name
 
@@ -202,6 +202,7 @@ def _handle_local_submission(
         "user_confidence": user_confidence,
         "user_notes": list_to_string(user_notes),
         "user_comments": user_comments,
+        "annotator": st.session_state.get("annotator_name", "unknown"),
         "timestamp": pd.Timestamp.now().isoformat(),
     }
 
@@ -212,15 +213,17 @@ def _handle_local_submission(
 
     # Persist to disk or S3
     output_dir = st.session_state.get("local_output_dir")
+    annotator = st.session_state.get("annotator_name", "unknown")
     if output_dir:
         csv_data = pd.DataFrame(st.session_state.local_validations).to_csv(
             index=False
         )
+        filename = _get_validations_filename(annotator)
         if is_s3_path(output_dir):
-            s3_uri = output_dir.rstrip("/") + "/" + VALIDATIONS_FILENAME
+            s3_uri = output_dir.rstrip("/") + "/" + filename
             write_s3_text(s3_uri, csv_data)
         else:
-            csv_path = Path(output_dir) / VALIDATIONS_FILENAME
+            csv_path = Path(output_dir) / filename
             csv_path.write_text(csv_data)
 
     # Mark clip as validated

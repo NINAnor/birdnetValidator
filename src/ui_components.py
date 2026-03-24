@@ -205,19 +205,42 @@ def _render_local_navigation_button():
 
 
 def render_local_download_button():
-    """Render download button for validation results CSV."""
+    """Render download button for all validation results (all annotators)."""
+    import io
+    from pathlib import Path
+
     import pandas as pd
 
-    validations = st.session_state.get("local_validations", [])
-    if not validations:
+    from s3_utils import is_s3_path, list_s3_files, read_s3_text
+    from selection_handlers import VALIDATIONS_PREFIX
+
+    output_dir = st.session_state.get("local_output_dir")
+    if not output_dir:
         return
 
-    df = pd.DataFrame(validations)
-    csv = df.to_csv(index=False)
+    all_dfs = []
+    if is_s3_path(output_dir):
+        all_files = list_s3_files(output_dir, extension=".csv")
+        csv_files = [
+            f for f in all_files
+            if f.split("/")[-1].startswith(VALIDATIONS_PREFIX)
+        ]
+        for csv_uri in csv_files:
+            text = read_s3_text(csv_uri)
+            all_dfs.append(pd.read_csv(io.StringIO(text)))
+    else:
+        for csv_path in Path(output_dir).glob(f"{VALIDATIONS_PREFIX}*.csv"):
+            all_dfs.append(pd.read_csv(csv_path))
+
+    if not all_dfs:
+        return
+
+    merged = pd.concat(all_dfs, ignore_index=True)
+    csv = merged.to_csv(index=False)
     st.download_button(
-        label=f"📥 Download Validations ({len(validations)} clips)",
+        label=f"📥 Download All Validations ({len(merged)} clips)",
         data=csv,
-        file_name="birdnet_validations.csv",
+        file_name="birdnet_validations_all.csv",
         mime="text/csv",
         use_container_width=True,
     )
