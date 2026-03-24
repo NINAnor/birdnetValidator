@@ -46,8 +46,12 @@ def translate_species_name(name, language):
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def extract_clip(file_path, start_time, sr=48000):
-    """Extract 5-second audio clip (1s before + 4s after detection start).
+def extract_clip(file_path, start_time, context_before=1, context_after=4, sr=48000):
+    """Extract audio clip around a detection start time.
+
+    The BirdNET detection window is 3 seconds (start_time to start_time + 3).
+    context_before and context_after are measured from the detection start.
+    Default: 1s before + 4s after = 5s total (detection at 1s–4s).
 
     Supports both local file paths and S3 URIs.
     """
@@ -64,8 +68,8 @@ def extract_clip(file_path, start_time, sr=48000):
         else:
             audio_data, _ = librosa.load(file_path, sr=sr, mono=True)
 
-        start_sample = max(0, int((start_time - 1) * sr))
-        end_sample = int((start_time + 4) * sr)
+        start_sample = max(0, int((start_time - context_before) * sr))
+        end_sample = int((start_time + context_after) * sr)
         return audio_data[start_sample:end_sample]
     except Exception as e:
         st.error(f"Error loading audio file: {e}")

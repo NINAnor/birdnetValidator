@@ -17,7 +17,7 @@ from utils import extract_clip
 def setup_page_config():
     """Configure Streamlit page settings."""
     st.set_page_config(
-        page_title="BirdNET Validator",
+        page_title="BirdValidator",
         layout="wide",
         initial_sidebar_state="expanded",
         page_icon="🐦",
@@ -47,9 +47,9 @@ def render_all_validated_message(mode_name, total_clips, extra_message=""):
 
 
 @st.cache_data(show_spinner=False)
-def _generate_spectrogram_image(file_path, start_time):
-    """Generate spectrogram as PNG bytes (cached by path + start_time)."""
-    clip = extract_clip(file_path, start_time)
+def _generate_spectrogram_image(file_path, start_time, context_before=1, context_after=4):
+    """Generate spectrogram as PNG bytes."""
+    clip = extract_clip(file_path, start_time, context_before, context_after)
     if clip is None:
         return None
 
@@ -66,9 +66,11 @@ def _generate_spectrogram_image(file_path, start_time):
     ax.set_xlabel("Time (s)")
     ax.set_ylim(0, 12000)
 
-    # Mark the 3s BirdNET detection window (1s to 4s in the 5s clip)
-    ax.axvline(x=1.0, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
-    ax.axvline(x=4.0, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
+    # Mark the 3s BirdNET detection window
+    detection_start = context_before
+    detection_end = context_before + 3
+    ax.axvline(x=detection_start, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
+    ax.axvline(x=detection_end, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
 
     plt.colorbar(im, ax=ax, label="Intensity (dB)")
     plt.tight_layout()
@@ -80,10 +82,10 @@ def _generate_spectrogram_image(file_path, start_time):
     return buf.getvalue()
 
 
-def render_spectrogram(file_path, start_time, expanded=False):
+def render_spectrogram(file_path, start_time, context_before=1, context_after=4, expanded=False):
     """Render audio spectrogram."""
     with st.expander("📊 Spectrogram", expanded=expanded):
-        img_bytes = _generate_spectrogram_image(file_path, start_time)
+        img_bytes = _generate_spectrogram_image(file_path, start_time, context_before, context_after)
         if img_bytes:
             st.image(img_bytes, use_container_width=True)
             st.caption(
@@ -160,7 +162,6 @@ def render_local_clip_section(result, selections):
         st.markdown("### 🎵 Audio Clip")
 
         filepath = result["filename"]
-        clip = extract_clip(filepath, result["start_time"])
 
         audio_basename = result.get(
             "audio_basename", filepath.split("/")[-1]
@@ -176,8 +177,21 @@ def render_local_clip_section(result, selections):
         if total_filtered is not None:
             st.markdown(f"**📊 Progress:** `{validated_count}` / `{total_filtered}` clips validated")
 
+        # Context duration slider
+        context_seconds = st.slider(
+            "🔍 Context around detection (seconds)",
+            min_value=1,
+            max_value=5,
+            value=1,
+            step=1,
+            help="Extra seconds of audio before and after the 3s BirdNET detection",
+        )
+        context_before = context_seconds
+        context_after = context_seconds + 3  # detection is 3s
+
+        clip = extract_clip(filepath, result["start_time"], context_before, context_after)
         render_audio_player(clip)
-        render_spectrogram(filepath, result["start_time"], expanded=True)
+        render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
         _render_local_navigation_button()
 
     return True
