@@ -1,6 +1,6 @@
 # BirdValidator
 
-A Streamlit web application for **validating** bird species detections made by [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer). This is **not** a detection tool — you must first run **BirdNET** or other model with similar output on your audio recordings to produce result files. Once you have those results, point this app at your audio and result directories (locally or on S3), then listen to each detection and confirm or reject species identifications.
+A Streamlit web application for **validating** bird species detections made by [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) **or any model with a compatible output (see Expected Data Format)**. This is **not** a detection tool — you must first run **BirdNET** or other model with similar output on your audio recordings to produce result files. Once you have those results, point this app at your audio and result directories (locally or on S3), then listen to each detection and confirm or reject species identifications.
 
 <p align="center">
   <img src="assets/screenshot_app.png" width="800" alt="Screenshot">
@@ -71,8 +71,35 @@ Then open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ## Expected Data Format
 
-- **Audio files:** `.wav`, `.flac`, `.mp3`, `.ogg`
-- **BirdNET results:** tab-separated `.txt` files with columns including `Begin Time (s)`, `Common Name`, `Confidence`, `Begin Path`
+### Audio files
+
+`.wav`, `.flac`, `.mp3`, `.ogg` — any standard audio format supported by librosa.
+
+### Detection result files
+
+Tab-separated `.txt` files with **at least** the following columns:
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| `Begin Time (s)` | Detection start time in seconds from the beginning of the audio file | `12.0` |
+| `End Time (s)` | Detection end time in seconds | `15.0` |
+| `Common Name` | Species common name (English) | `Eurasian Blackbird` |
+| `Species Code` | Short species code | `eurbla1` |
+| `Confidence` | Model confidence score (0.0–1.0) | `0.87` |
+| `Begin Path` | Path to the source audio file | `/data/audio/site1/recording.wav` |
+
+This is the default output format of [BirdNET-Analyzer](https://github.com/birdnet-team/BirdNET-Analyzer), but **any classifier that produces tab-separated `.txt` files with these columns will work**. If you use a different model, just make sure its output includes the columns above. Rows where `Common Name` is `nocall` are automatically ignored.
+
+Example (tab-separated):
+
+```
+Selection	View	Channel	Begin Time (s)	End Time (s)	Low Freq (Hz)	High Freq (Hz)	Common Name	Species Code	Confidence	Begin Path	File Offset (s)
+1	Spectrogram 1	1	0.0	3.0	0	15000	Eurasian Blackbird	eurbla1	0.87	/data/audio/rec.wav	0.0
+2	Spectrogram 1	1	3.0	6.0	0	15000	Common Chaffinch	comcha	0.42	/data/audio/rec.wav	3.0
+```
+
+> [!NOTE] 
+> Extra columns (like `Selection`, `View`, `Channel`, `Low Freq (Hz)`, `High Freq (Hz)`, `File Offset (s)`) are ignored — only the six required columns matter.
 
 ## Suggested Workflow
 

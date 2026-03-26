@@ -26,7 +26,9 @@ def setup_page_config():
 
 def render_sidebar_logo():
     """Render the BirdValidator logo in the sidebar."""
-    logo_path = Path(__file__).parent.parent / "assets" / "logo.png"
+    from config import ASSETS_DIR
+
+    logo_path = ASSETS_DIR / "logo.png"
     if logo_path.exists():
         st.sidebar.image(str(logo_path), width=300)
         st.sidebar.markdown("---")
