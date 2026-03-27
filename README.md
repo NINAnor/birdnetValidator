@@ -5,7 +5,7 @@
 A Streamlit web app for **validating** bird species detections made by [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) or any model with a compatible output (see [Expected Data Format](#-expected-data-format)). This is **not** a detection tool — run BirdNET first, then use this app to listen to each detection and confirm or reject species identifications.
 
 <p align="center">
-  <img src="assets/screenshot_app.png" width="800" alt="Screenshot">
+  <img src="assets/screenshot_app.png" width="4s00" alt="Screenshot">
 </p>
 
 ---
@@ -29,50 +29,100 @@ A Streamlit web app for **validating** bird species detections made by [BirdNET]
 
 ## 🚀 Getting Started
 
-### 1. Clone the repository
+### Option A: Python package (recommended)
+
+Install directly from GitHub — no config files needed:
+
+```bash
+pip install git+https://github.com/NINAnor/birdnetValidator.git
+```
+
+Then in Python:
+
+```python
+import birdnet_validator
+
+birdnet_validator.run(
+    audio_dir="/path/to/audio",
+    results_dir="/path/to/results",
+    output_dir="/path/to/output",
+)
+```
+
+This opens the app in your browser automatically. That's it! 🎉
+
+Or from the command line:
+
+```bash
+birdnet-validator \
+    --audio-dir /path/to/audio \
+    --results-dir /path/to/results \
+    --output-dir /path/to/output
+```
+
+<details>
+<summary>☁️ Using S3 paths? (click to expand)</summary>
+
+Pass your S3 credentials as extra arguments:
+
+```python
+birdnet_validator.run(
+    audio_dir="s3://my-bucket/audio",
+    results_dir="s3://my-bucket/results",
+    output_dir="s3://my-bucket/output",
+    s3_endpoint_url="https://your-s3-endpoint.com",
+    s3_access_key="your-access-key",
+    s3_secret_key="your-secret-key",
+)
+```
+
+Or via CLI:
+
+```bash
+birdnet-validator \
+    --audio-dir s3://my-bucket/audio \
+    --results-dir s3://my-bucket/results \
+    --output-dir s3://my-bucket/output \
+    --s3-endpoint-url https://your-s3-endpoint.com \
+    --s3-access-key your-access-key \
+    --s3-secret-key your-secret-key
+```
+
+</details>
+
+### Option B: R package
+
+Install directly from GitHub — Python dependencies are handled automatically:
+
+```r
+remotes::install_github("NINAnor/birdnetValidator", subdir = "r-package")
+```
+
+Then:
+
+```r
+library(birdnetValidator)
+
+run_validator(
+  audio_dir = "/path/to/audio",
+  results_dir = "/path/to/results",
+  output_dir = "/path/to/output"
+)
+```
+
+The first call sets up a Python environment behind the scenes. Subsequent calls start instantly.
+
+### Option C: From source (for developers)
 
 ```bash
 git clone https://github.com/NINAnor/birdnetValidator.git
 cd birdnetValidator
-```
-
-### 2. Install dependencies
-
-```bash
 uv sync
-```
-
-### 3. Configure paths
-
-```bash
-cp CONFIG.yaml.example CONFIG.yaml
-```
-
-Edit `CONFIG.yaml` with your directories:
-
-```yaml
-audio_dir: /path/to/your/audio/files
-results_dir: /path/to/your/birdnet/results
-output_dir: /path/to/output
-```
-
-Paths can be local or S3 URIs (e.g. `s3://my-bucket/audio`). For S3, also fill in the credentials:
-
-```yaml
-s3_endpoint_url: https://your-s3-endpoint.com
-s3_access_key: your-access-key
-s3_secret_key: your-secret-key
-```
-
-### 4. Run the app
-
-```bash
+cp CONFIG.yaml.example CONFIG.yaml   # edit with your paths
 uv run streamlit run src/dashboard.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) and start validating! 🎉
-
-### 5. Validate
+### 🎯 Validating
 
 1. Enter your name in the sidebar
 2. Adjust confidence threshold and species filters
