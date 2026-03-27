@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from data_processor import get_unique_species, process_local_directories
-from s3_utils import is_s3_path, list_s3_files, read_s3_text, s3_file_exists, write_s3_text
+from s3_utils import is_s3_path, list_s3_files, read_s3_text
 from ui_components import render_sidebar_logo
 from utils import LANGUAGE_OPTIONS, translate_species_name
 
@@ -43,21 +43,31 @@ def _load_existing_validations(output_dir, annotator):
             text = read_s3_text(csv_uri)
             df = pd.read_csv(io.StringIO(text))
             path_col = "filepath" if "filepath" in df.columns else "filename"
-            all_validated.update(
-                (row[path_col], row["start_time"]) for _, row in df.iterrows()
-            )
-            if csv_uri.split("/")[-1] == _get_validations_filename(annotator):
+            is_own = csv_uri.split("/")[-1] == _get_validations_filename(annotator)
+            if is_own:
                 own_records = df.to_dict("records")
+                all_validated.update(
+                    (row[path_col], row["start_time"]) for _, row in df.iterrows()
+                )
+            else:
+                for _, row in df.iterrows():
+                    if not row.get("peer_review", False):
+                        all_validated.add((row[path_col], row["start_time"]))
     else:
         output_path = Path(output_dir)
         for csv_path in output_path.glob(f"{VALIDATIONS_PREFIX}*.csv"):
             df = pd.read_csv(csv_path)
             path_col = "filepath" if "filepath" in df.columns else "filename"
-            all_validated.update(
-                (row[path_col], row["start_time"]) for _, row in df.iterrows()
-            )
-            if csv_path.name == _get_validations_filename(annotator):
+            is_own = csv_path.name == _get_validations_filename(annotator)
+            if is_own:
                 own_records = df.to_dict("records")
+                all_validated.update(
+                    (row[path_col], row["start_time"]) for _, row in df.iterrows()
+                )
+            else:
+                for _, row in df.iterrows():
+                    if not row.get("peer_review", False):
+                        all_validated.add((row[path_col], row["start_time"]))
 
     st.session_state.local_validated_clips = all_validated
     st.session_state.local_validations = own_records

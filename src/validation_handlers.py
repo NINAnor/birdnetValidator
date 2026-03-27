@@ -78,6 +78,15 @@ def render_local_validation_form(result, selections):
             if none_of_above:
                 selected_species = ["NONE_DETECTED"]
 
+            peer_review = st.checkbox(
+                "🔄 Request peer review",
+                key=f"local_peer_review_{form_key}",
+                help=(
+                    "Check this if you are unsure and want "
+                    "other annotators to also validate this clip"
+                ),
+            )
+
             st.markdown("---")
 
             # Additional species not in BirdNET predictions
@@ -165,6 +174,7 @@ def render_local_validation_form(result, selections):
                     user_notes,
                     user_confidence,
                     user_comments,
+                    peer_review,
                 )
 
 
@@ -175,6 +185,7 @@ def _handle_local_submission(
     user_notes,
     user_confidence,
     user_comments,
+    peer_review,
 ):
     """Handle local validation form submission."""
     if not user_confidence:
@@ -203,6 +214,7 @@ def _handle_local_submission(
         "user_notes": list_to_string(user_notes),
         "user_comments": user_comments,
         "annotator": st.session_state.get("annotator_name", "unknown"),
+        "peer_review": peer_review,
         "timestamp": pd.Timestamp.now().isoformat(),
     }
 

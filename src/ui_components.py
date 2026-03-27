@@ -4,8 +4,10 @@ import io
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import streamlit as st
 
+from config import ASSETS_DIR
 from utils import extract_clip
 
 
@@ -26,8 +28,6 @@ def setup_page_config():
 
 def render_sidebar_logo():
     """Render the BirdValidator logo in the sidebar."""
-    from config import ASSETS_DIR
-
     logo_path = ASSETS_DIR / "logo.png"
     if logo_path.exists():
         st.sidebar.image(str(logo_path), width=300)
@@ -174,11 +174,6 @@ def render_local_clip_section(result, selections):
             f"`{result['start_time']}s - {result['end_time']}s`"
         )
 
-        validated_count = result.get("validated_count")
-        total_filtered = result.get("total_filtered")
-        if total_filtered is not None:
-            st.markdown(f"**📊 Progress:** `{validated_count}` / `{total_filtered}` clips validated")
-
         # Context duration slider
         context_seconds = st.slider(
             "🔍 Context around detection (seconds)",
@@ -222,11 +217,6 @@ def _render_local_navigation_button():
 
 def render_local_download_button():
     """Render download button for all validation results (all annotators)."""
-    import io
-    from pathlib import Path
-
-    import pandas as pd
-
     from s3_utils import is_s3_path, list_s3_files, read_s3_text
     from selection_handlers import VALIDATIONS_PREFIX
 

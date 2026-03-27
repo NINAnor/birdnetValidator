@@ -14,6 +14,7 @@ A Streamlit web application for **validating** bird species detections made by [
 - **Validation form** — confirm species, flag noise, rate your confidence
 - **Auto-save** — validations are saved automatically to a CSV in your output directory
 - **Resume support** — previously validated clips are skipped on restart
+- **Peer review** — flag uncertain clips so other annotators can provide a second opinion
 
 ## Getting Started
 
@@ -127,6 +128,8 @@ If you want to **quantify BirdNET's accuracy** for each species — i.e. determi
 ### Working with multiple annotators
 
 The app supports multiple annotators out of the box — each person enters their name in the sidebar, and validations are saved to separate files (`birdnet_validations_{name}.csv`). Clips validated by any annotator are skipped for everyone.
+
+If an annotator is **unsure** about a clip, they can tick **🔄 Request peer review** before submitting. The clip is saved to their file (so they won't see it again), but it **remains visible to all other annotators** for a second opinion. The `peer_review` column in the output CSV marks which clips were flagged.
 
 To divide the workload efficiently:
 

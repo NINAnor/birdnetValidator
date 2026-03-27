@@ -15,7 +15,8 @@ S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
 
+# Assets directory
+ASSETS_DIR = Path(__file__).parent.parent / "assets"
+
 # Path to multilingual species names CSV
-BIRDNET_MULTILINGUAL_PATH = (
-    Path(__file__).parent.parent / "assets" / "birdnet_multilingual.csv"
-)
+BIRDNET_MULTILINGUAL_PATH = ASSETS_DIR / "birdnet_multilingual.csv"
