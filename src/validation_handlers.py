@@ -7,7 +7,7 @@ import streamlit as st
 
 from selection_handlers import VALIDATIONS_PREFIX, _get_validations_filename
 from s3_utils import is_s3_path, write_s3_text
-from utils import load_species_translations, translate_species_name
+from utils import get_scientific_name, load_species_translations, translate_species_name
 
 
 @st.cache_data
@@ -82,6 +82,23 @@ def render_local_validation_form(result, selections):
         )
 
         st.markdown("---")
+
+        # Species info links
+        with st.expander("ℹ️ More info on the species", expanded=False, key=f"exp_info_{form_key}"):
+            for species_name in species_list:
+                scientific = get_scientific_name(species_name)
+                links = []
+                if scientific:
+                    wiki_name = scientific.replace(" ", "_")
+                    xc_name = scientific.replace(" ", "-")
+                    links.append(f"[Wikipedia](https://en.wikipedia.org/wiki/{wiki_name})")
+                    links.append(f"[Xeno-Canto](https://xeno-canto.org/species/{xc_name})")
+                label = f"**{species_name}**"
+                if scientific:
+                    label += f" (*{scientific}*)"
+                if links:
+                    label += f" — {' · '.join(links)}"
+                st.markdown(label)
 
         # Additional species not in BirdNET predictions
         with st.expander("🐦 Other species not listed above", expanded=False, key=f"exp_other_{form_key}"):

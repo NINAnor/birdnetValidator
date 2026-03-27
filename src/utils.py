@@ -60,6 +60,19 @@ def translate_species_name(name, language):
     return mapping.get(name, name)
 
 
+@st.cache_data
+def _build_scientific_name_map():
+    """Build a dict mapping en_uk names to scientific names."""
+    df = load_species_translations()
+    return dict(zip(df["en_uk"], df["Scientific_Name"], strict=False))
+
+
+def get_scientific_name(common_name):
+    """Get the scientific name for an English common name."""
+    mapping = _build_scientific_name_map()
+    return mapping.get(common_name)
+
+
 @st.cache_data(ttl=600, show_spinner=False)
 def extract_clip(file_path, start_time, context_before=1, context_after=4, sr=48000):
     """Extract audio clip around a detection start time.
