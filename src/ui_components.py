@@ -26,13 +26,6 @@ def setup_page_config():
     )
 
 
-def render_sidebar_logo():
-    """Render the BirdValidator logo in the sidebar."""
-    logo_path = ASSETS_DIR / "logo.png"
-    if logo_path.exists():
-        st.sidebar.image(str(logo_path), width=300)
-        st.sidebar.markdown("---")
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -49,36 +42,79 @@ def render_all_validated_message(mode_name, total_clips, extra_message=""):
 
 
 @st.cache_data(show_spinner=False)
+def _is_dark_theme():
+    """Detect whether Streamlit is using a dark theme."""
+    try:
+        base = st.get_option("theme.base")
+        if base:
+            return base == "dark"
+        bg = st.get_option("theme.backgroundColor")
+        if bg:
+            # Parse hex and check luminance
+            r, g, b = int(bg[1:3], 16), int(bg[3:5], 16), int(bg[5:7], 16)
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 128
+    except Exception:
+        pass
+    # Default to dark (Streamlit's default)
+    return True
+
+
 def _generate_spectrogram_image(file_path, start_time, context_before=1, context_after=4):
     """Generate spectrogram as PNG bytes."""
     clip = extract_clip(file_path, start_time, context_before, context_after)
     if clip is None:
         return None
 
+    dark = _is_dark_theme()
+
+    if dark:
+        bg_color = "#0e1117"
+        text_color = "#c0c0c0"
+        spine_color = "#333333"
+        line_color = "cyan"
+        cmap = "magma"
+    else:
+        bg_color = "#f0ece4"
+        text_color = "#333333"
+        spine_color = "#aaaaaa"
+        line_color = "#d62728"
+        cmap = "magma"
+
     fig, ax = plt.subplots(figsize=(10, 4))
-    Pxx, freqs, bins, im = ax.specgram(
+    fig.patch.set_facecolor(bg_color)
+    ax.set_facecolor(bg_color)
+
+    _, _, _, im = ax.specgram(
         clip,
         Fs=48000,
         NFFT=1024,
         noverlap=512,
-        cmap="viridis",
+        cmap=cmap,
         vmin=-120,
     )
-    ax.set_ylabel("Frequency (Hz)")
-    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Frequency (Hz)", color=text_color)
+    ax.set_xlabel("Time (s)", color=text_color)
     ax.set_ylim(0, 12000)
+    ax.tick_params(colors=text_color)
+    for spine in ax.spines.values():
+        spine.set_color(spine_color)
 
     # Mark the 3s BirdNET detection window
     detection_start = context_before
     detection_end = context_before + 3
-    ax.axvline(x=detection_start, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
-    ax.axvline(x=detection_end, color="red", linestyle="--", linewidth=1.5, alpha=0.8)
+    ax.axvline(x=detection_start, color=line_color, linestyle="--", linewidth=1.5, alpha=0.8)
+    ax.axvline(x=detection_end, color=line_color, linestyle="--", linewidth=1.5, alpha=0.8)
 
-    plt.colorbar(im, ax=ax, label="Intensity (dB)")
+    cbar = plt.colorbar(im, ax=ax, label="Intensity (dB)")
+    cbar.ax.yaxis.set_tick_params(color=text_color)
+    cbar.ax.yaxis.label.set_color(text_color)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color=text_color)
+    cbar.outline.set_edgecolor(spine_color)
+
     plt.tight_layout()
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=100)
+    fig.savefig(buf, format="png", dpi=100, facecolor=fig.get_facecolor())
     plt.close(fig)
     buf.seek(0)
     return buf.getvalue()
@@ -90,8 +126,9 @@ def render_spectrogram(file_path, start_time, context_before=1, context_after=4,
         img_bytes = _generate_spectrogram_image(file_path, start_time, context_before, context_after)
         if img_bytes:
             st.image(img_bytes, use_container_width=True)
+            line_label = "Cyan" if _is_dark_theme() else "Red"
             st.caption(
-                "🔴 Red lines mark the 3-second BirdNET detection. "
+                f"🔵 {line_label} lines mark the 3-second BirdNET detection. "
                 "Focus your validation there — the surrounding audio "
                 "is for context only."
             )

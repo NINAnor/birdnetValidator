@@ -78,14 +78,3 @@ def write_s3_bytes(s3_uri, data):
 def write_s3_text(s3_uri, text):
     """Write a text string to an S3 object."""
     write_s3_bytes(s3_uri, text.encode("utf-8"))
-
-
-def s3_file_exists(s3_uri):
-    """Check if an S3 object exists."""
-    client = _get_s3_client()
-    bucket, key = parse_s3_uri(s3_uri)
-    try:
-        client.head_object(Bucket=bucket, Key=key)
-        return True
-    except client.exceptions.ClientError:
-        return False

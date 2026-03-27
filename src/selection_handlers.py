@@ -4,6 +4,7 @@ Manages data loading, confidence threshold filtering,
 and species selection. Supports local paths and S3 URIs.
 """
 
+import io
 from pathlib import Path
 
 import pandas as pd
@@ -31,8 +32,6 @@ def _load_existing_validations(output_dir, annotator):
     own_records = []
 
     if is_s3_path(output_dir):
-        import io
-
         all_files = list_s3_files(output_dir, extension=".csv")
         csv_files = [
             f for f in all_files
