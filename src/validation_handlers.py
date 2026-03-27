@@ -36,7 +36,7 @@ def render_local_validation_form(result, selections):
 
     form_key = st.session_state.get("local_form_key", 0)
 
-    with st.form(f"local_validation_form_{form_key}"):
+    with st.container(border=True), st.form(f"local_validation_form_{form_key}"):
         st.markdown("#### Species detected by BirdNET:")
         st.markdown("**Select which species you can actually hear:**")
         st.markdown("---")
@@ -120,9 +120,8 @@ def render_local_validation_form(result, selections):
             else:
                 other_species = other_species_display
 
-        # Noise/sound environment checkboxes
+        # Noise/sound environment
         with st.expander("📝 Additional sounds", expanded=False, key=f"exp_noise_{form_key}"):
-            user_notes = []
             noise_classes = [
                 "Loud foreground noise",
                 "Rain",
@@ -135,17 +134,16 @@ def render_local_validation_form(result, selections):
                 "Traffic/Car",
                 "Aircraft",
                 "Water/Waves",
+                "Other",
             ]
-            mid = (len(noise_classes) + 1) // 2
-            noise_col1, noise_col2 = st.columns(2)
-            with noise_col1:
-                for noise in noise_classes[:mid]:
-                    if st.checkbox(noise, key=f"local_{noise}_{form_key}"):
-                        user_notes.append(noise)
-            with noise_col2:
-                for noise in noise_classes[mid:]:
-                    if st.checkbox(noise, key=f"local_{noise}_{form_key}"):
-                        user_notes.append(noise)
+            user_notes = st.multiselect(
+                "Select sounds heard in the clip...",
+                options=noise_classes,
+                default=[],
+                placeholder="Select sounds heard in the clip...",
+                key=f"local_noise_{form_key}",
+                label_visibility="collapsed",
+            )
 
         # Free-text comments
         with st.expander("💬 Comments", expanded=False, key=f"exp_comments_{form_key}"):

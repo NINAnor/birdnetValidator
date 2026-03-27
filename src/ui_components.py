@@ -172,32 +172,34 @@ def render_local_clip_section(result, selections):
 
     st.markdown("### 🎵 Audio Clip")
 
-    filepath = result["filename"]
+    with st.container(border=True):
+        filepath = result["filename"]
 
-    audio_basename = result.get(
-        "audio_basename", filepath.split("/")[-1]
-    )
-    st.markdown(f"**📁 File:** `{audio_basename}`")
-    st.markdown(
-        f"**⏱️ Detection time:** "
-        f"`{result['start_time']}s - {result['end_time']}s`"
-    )
+        audio_basename = result.get(
+            "audio_basename", filepath.split("/")[-1]
+        )
+        st.markdown(f"**📁 File:** `{audio_basename}`")
+        st.markdown(
+            f"**⏱️ Detection time:** "
+            f"`{result['start_time']}s - {result['end_time']}s`"
+        )
 
-    # Context duration slider
-    context_seconds = st.slider(
-        "🔍 Context around detection (seconds)",
-        min_value=1,
-        max_value=5,
-        value=1,
-        step=1,
-        help="Extra seconds of audio before and after the 3s BirdNET detection",
-    )
-    context_before = context_seconds
-    context_after = context_seconds + 3  # detection is 3s
+        # Context duration slider
+        context_seconds = st.slider(
+            "🔍 Context around detection (seconds)",
+            min_value=1,
+            max_value=5,
+            value=1,
+            step=1,
+            help="Extra seconds of audio before and after the 3s BirdNET detection",
+        )
+        context_before = context_seconds
+        context_after = context_seconds + 3  # detection is 3s
 
-    clip = extract_clip(filepath, result["start_time"], context_before, context_after)
-    render_audio_player(clip)
-    render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
+        clip = extract_clip(filepath, result["start_time"], context_before, context_after)
+        render_audio_player(clip)
+        render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
+
     _render_local_navigation_button()
 
     return True
