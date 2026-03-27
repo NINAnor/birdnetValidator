@@ -38,15 +38,7 @@ run_validator <- function(audio_dir,
                           port = 8501L,
                           open_browser = TRUE) {
 
-  if (!reticulate::virtualenv_exists("birdnet-validator")) {
-    message("Setting up Python environment (first time only)...")
-    reticulate::virtualenv_create("birdnet-validator")
-    reticulate::virtualenv_install(
-      "birdnet-validator",
-      packages = "birdnet-validator",
-      pip_options = "--upgrade"
-    )
-  }
+  .ensure_python_env()
 
   reticulate::use_virtualenv("birdnet-validator", required = TRUE)
 
@@ -62,4 +54,57 @@ run_validator <- function(audio_dir,
     port = as.integer(port),
     open_browser = open_browser
   )
+}
+
+
+#' Update the BirdNET Validator Python package
+#'
+#' Removes the existing Python environment and reinstalls from GitHub.
+#' Run this after the package has been updated on GitHub.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' update_validator()
+#' }
+update_validator <- function() {
+  .setup_windows_venv_root()
+
+  if (reticulate::virtualenv_exists("birdnet-validator")) {
+    message("Removing old environment...")
+    reticulate::virtualenv_remove("birdnet-validator", confirm = FALSE)
+  }
+
+  .ensure_python_env()
+  message("Done! Run run_validator() to start the app.")
+}
+
+
+#' @keywords internal
+.setup_windows_venv_root <- function() {
+  if (.Platform$OS.type == "windows") {
+    safe_root <- file.path(Sys.getenv("LOCALAPPDATA"), ".virtualenvs")
+    if (!dir.exists(safe_root)) {
+      dir.create(safe_root, recursive = TRUE)
+    }
+    Sys.setenv(WORKON_HOME = safe_root)
+  }
+}
+
+
+#' @keywords internal
+.ensure_python_env <- function() {
+  .setup_windows_venv_root()
+
+  if (!reticulate::virtualenv_exists("birdnet-validator")) {
+    message("Setting up Python environment (first time only)...")
+    reticulate::virtualenv_create("birdnet-validator")
+    reticulate::virtualenv_install(
+      "birdnet-validator",
+      packages = "birdnet-validator @ git+https://github.com/NINAnor/birdnetValidator.git",
+      pip_options = c("--no-cache-dir")
+    )
+    message("Setup complete!")
+  }
 }

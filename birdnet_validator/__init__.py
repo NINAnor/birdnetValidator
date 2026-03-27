@@ -86,4 +86,14 @@ def run(
         "--server.headless", "true",
     ]
 
-    subprocess.run(cmd, env=env, check=True)
+    # Use DEVNULL/PIPE for std handles to avoid "invalid handle" errors
+    # when launched from R/reticulate on Windows (all three handles can be
+    # invalid in an embedded R session).
+    subprocess.run(
+        cmd,
+        env=env,
+        check=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )

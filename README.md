@@ -112,6 +112,8 @@ run_validator(
 
 The first call sets up a Python environment behind the scenes. Subsequent calls start instantly.
 
+> **Note:** Python (>= 3.10) must be installed on your system. You can download it from [python.org](https://www.python.org/downloads/). The R package handles everything else (virtual environment, Python dependencies).
+
 ### Option C: From source (for developers)
 
 ```bash
