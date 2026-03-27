@@ -18,10 +18,25 @@ def load_species_translations():
 
 LANGUAGE_OPTIONS = {
     "en_uk": "English",
-    "fr": "Français",
-    "es": "Español",
-    "nl": "Nederlands",
-    "no": "Norsk",
+    "ar": "العربية (Arabic)",
+    "da": "Dansk (Danish)",
+    "de": "Deutsch (German)",
+    "es": "Español (Spanish)",
+    "fr": "Français (French)",
+    "it": "Italiano (Italian)",
+    "ja": "日本語 (Japanese)",
+    "ko": "한국어 (Korean)",
+    "nl": "Nederlands (Dutch)",
+    "no": "Norsk (Norwegian)",
+    "pl": "Polski (Polish)",
+    "pt": "Português (Portuguese)",
+    "pt_br": "Português brasileiro (Brazilian Portuguese)",
+    "ru": "Русский (Russian)",
+    "sv": "Svenska (Swedish)",
+    "th": "ไทย (Thai)",
+    "tr": "Türkçe (Turkish)",
+    "uk": "Українська (Ukrainian)",
+    "zh": "中文 (Chinese)",
 }
 
 
