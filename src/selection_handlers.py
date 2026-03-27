@@ -11,7 +11,6 @@ import streamlit as st
 
 from data_processor import get_unique_species, process_local_directories
 from s3_utils import is_s3_path, list_s3_files, read_s3_text
-from ui_components import render_sidebar_logo
 from utils import LANGUAGE_OPTIONS, translate_species_name
 
 VALIDATIONS_PREFIX = "birdnet_validations_"
@@ -80,12 +79,9 @@ def render_local_data_loader():
     """
     from config import AUDIO_DIR, OUTPUT_DIR, RESULTS_DIR
 
-    render_sidebar_logo()
-
     # Annotator name (must be set before data loads)
-    st.sidebar.header("👤 Annotator")
     annotator = st.sidebar.text_input(
-        "Your name",
+        "👤 Your name",
         value=st.session_state.get("annotator_name", ""),
         placeholder="e.g. benjamin",
         help="Used to separate your validations from other annotators",
@@ -95,9 +91,6 @@ def render_local_data_loader():
         return False
     annotator = annotator.strip().lower().replace(" ", "_")
     st.session_state.annotator_name = annotator
-
-    st.sidebar.markdown("---")
-    st.sidebar.header("📁 Data")
 
     if not AUDIO_DIR or not RESULTS_DIR or not OUTPUT_DIR:
         st.sidebar.error(
@@ -167,11 +160,8 @@ def render_local_data_loader():
 
 def render_language_selector():
     """Render language selector in the sidebar."""
-    st.sidebar.markdown("---")
-    st.sidebar.header("🌐 Language")
-
     language = st.sidebar.selectbox(
-        "Species name language",
+        "🌐 Language",
         options=list(LANGUAGE_OPTIONS.keys()),
         format_func=lambda k: LANGUAGE_OPTIONS[k],
         index=0,
@@ -182,11 +172,8 @@ def render_language_selector():
 
 def render_local_confidence_filter():
     """Render confidence range slider."""
-    st.sidebar.markdown("---")
-    st.sidebar.header("🎯 Confidence Filter")
-
     confidence_range = st.sidebar.slider(
-        "BirdNET confidence range",
+        "🎯 Confidence range",
         min_value=0.0,
         max_value=1.0,
         value=(0.1, 1.0),
@@ -202,25 +189,22 @@ def render_local_species_filter(selections):
     Returns list of selected species (English) or None for all species.
     """
     st.sidebar.markdown("---")
-    st.sidebar.header("🐦 Species Filter")
+
+    filter_enabled = st.sidebar.checkbox(
+        "🐦 Filter by species",
+        value=False,
+        help="Enable to select specific species to validate",
+    )
+
+    if not filter_enabled:
+        return None
 
     clips = st.session_state.get("local_clips", [])
     if not clips:
         return None
 
     available_species = get_unique_species(clips)
-
     language = selections.get("language", "en_uk")
-
-    filter_enabled = st.sidebar.checkbox(
-        "Filter by species",
-        value=False,
-        help="Enable to select specific species to validate",
-    )
-
-    if not filter_enabled:
-        st.sidebar.info(f"📊 Showing all {len(available_species)} species")
-        return None
 
     display_names = [
         translate_species_name(s, language) for s in available_species

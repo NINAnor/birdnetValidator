@@ -109,38 +109,48 @@ def render_audio_player(clip):
 # ---------------------------------------------------------------------------
 
 
-def render_local_page_header():
-    """Render local mode page header."""
-    st.title("🐦 BirdNET Validator", text_alignment="center")
-    st.markdown(
-        "Validate bird species detections from BirdNET.",
-        text_alignment="center",
-    )
+@st.dialog(" ", width="small")
+def _show_welcome_dialog():
+    """Show welcome dialog with logo and instructions."""
+    logo_path = ASSETS_DIR / "logo.png"
+    if logo_path.exists():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image(str(logo_path), use_container_width=True)
+
+    st.markdown("""
+<h3 style="text-align: center;">Welcome to BirdNET Validator!</h3>
+
+<div style="text-align: center;">
+
+🎧 **Listen** to each audio clip and inspect the spectrogram
+
+✅ **Select** which species you can actually hear
+
+➕ **Add** any species missed by the classifier
+
+📝 Optionally tag background sounds and leave comments
+
+🎯 **Rate** your confidence and **submit**
+
+📥 **Download** your results as CSV when done
+
+<br>
+
+*Use the sidebar to adjust confidence range, language, and species filters.*
+
+</div>
+""", unsafe_allow_html=True)
+
+    if st.button("Let's go! 🚀", type="primary", use_container_width=True):
+        st.session_state.welcome_dismissed = True
+        st.rerun()
 
 
-def render_local_help_section():
-    """Render local mode help information."""
-    with st.expander("ℹ️ Instructions", expanded=False):
-        st.markdown("""### 📖 How to use
-
-**Getting Started:**
-1. Copy `CONFIG.yaml.example` to `CONFIG.yaml` and set your three directory paths (local or `s3://`)
-2. For S3, also set `s3_endpoint_url`, `s3_access_key`, and `s3_secret_key`
-3. Run the app with `uv run streamlit run src/dashboard.py`
-4. **Adjust** the confidence threshold and species filters in the sidebar
-
-**Validation Process:**
-1. **Listen** to each audio clip
-2. **Select** which species you can actually hear from the BirdNET detections
-3. **Add** any additional species not detected by BirdNET
-4. **Rate** your confidence and submit
-5. **Download** your validation results as CSV when done
-
-**Expected File Format:**
-- Audio files: `.wav`, `.flac`, `.mp3`, `.ogg`
-- BirdNET results: tab-separated `.txt` files with columns including \
-`Begin Time (s)`, `Common Name`, `Confidence`, `Begin Path`
-""")
+def render_welcome_dialog():
+    """Show welcome dialog on first visit."""
+    if not st.session_state.get("welcome_dismissed", False):
+        _show_welcome_dialog()
 
 
 def render_local_clip_section(result, selections):
@@ -160,36 +170,35 @@ def render_local_clip_section(result, selections):
         )
         return False
 
-    with st.container(border=True):
-        st.markdown("### 🎵 Audio Clip")
+    st.markdown("### 🎵 Audio Clip")
 
-        filepath = result["filename"]
+    filepath = result["filename"]
 
-        audio_basename = result.get(
-            "audio_basename", filepath.split("/")[-1]
-        )
-        st.markdown(f"**📁 File:** `{audio_basename}`")
-        st.markdown(
-            f"**⏱️ Detection time:** "
-            f"`{result['start_time']}s - {result['end_time']}s`"
-        )
+    audio_basename = result.get(
+        "audio_basename", filepath.split("/")[-1]
+    )
+    st.markdown(f"**📁 File:** `{audio_basename}`")
+    st.markdown(
+        f"**⏱️ Detection time:** "
+        f"`{result['start_time']}s - {result['end_time']}s`"
+    )
 
-        # Context duration slider
-        context_seconds = st.slider(
-            "🔍 Context around detection (seconds)",
-            min_value=1,
-            max_value=5,
-            value=1,
-            step=1,
-            help="Extra seconds of audio before and after the 3s BirdNET detection",
-        )
-        context_before = context_seconds
-        context_after = context_seconds + 3  # detection is 3s
+    # Context duration slider
+    context_seconds = st.slider(
+        "🔍 Context around detection (seconds)",
+        min_value=1,
+        max_value=5,
+        value=1,
+        step=1,
+        help="Extra seconds of audio before and after the 3s BirdNET detection",
+    )
+    context_before = context_seconds
+    context_after = context_seconds + 3  # detection is 3s
 
-        clip = extract_clip(filepath, result["start_time"], context_before, context_after)
-        render_audio_player(clip)
-        render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
-        _render_local_navigation_button()
+    clip = extract_clip(filepath, result["start_time"], context_before, context_after)
+    render_audio_player(clip)
+    render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
+    _render_local_navigation_button()
 
     return True
 
@@ -254,6 +263,4 @@ def render_local_download_button():
 
 def render_local_empty_placeholder():
     """Render placeholder when no clip is loaded."""
-    with st.container(border=True):
-        st.markdown("### 🎯 Validation")
-        st.info("📁 Set audio_dir, results_dir, and output_dir in CONFIG.yaml (local paths or s3:// URIs).")
+    st.info("👤 Enter your name in the sidebar to start validating.")

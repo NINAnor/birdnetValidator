@@ -32,71 +32,67 @@ def _build_reverse_translation_map(language):
 
 def render_local_validation_form(result, selections):
     """Render the validation form for local mode."""
-    with st.container(border=True):
-        st.markdown("### 🎯 Validation")
+    st.markdown("### 🎯 Validation")
 
-        validated_count = result.get("validated_count", 0)
-        total_filtered = result.get("total_filtered", 0)
-        if total_filtered:
-            st.info(f"📊 **{validated_count}** out of **{total_filtered}** clips validated")
+    form_key = st.session_state.get("local_form_key", 0)
 
-        form_key = st.session_state.get("local_form_key", 0)
+    with st.form(f"local_validation_form_{form_key}"):
+        st.markdown("#### Species detected by BirdNET:")
+        st.markdown("**Select which species you can actually hear:**")
+        st.markdown("---")
 
-        with st.form(f"local_validation_form_{form_key}"):
-            st.markdown("#### Species detected by BirdNET:")
-            st.markdown("**Select which species you can actually hear:**")
-            st.markdown("---")
+        species_list = result.get("species_array", [])
+        confidence_list = result.get("confidence_array", [])
+        language = selections.get("language", "en_uk")
 
-            species_list = result.get("species_array", [])
-            confidence_list = result.get("confidence_array", [])
-            language = selections.get("language", "en_uk")
+        # Sort by confidence descending
+        species_data = sorted(
+            zip(species_list, confidence_list, strict=False),
+            key=lambda x: x[1],
+            reverse=True,
+        )
 
-            # Sort by confidence descending
-            species_data = sorted(
-                zip(species_list, confidence_list, strict=False),
-                key=lambda x: x[1],
-                reverse=True,
-            )
+        selected_species = []
+        for index, (species, confidence) in enumerate(species_data):
+            display_name = translate_species_name(species, language)
+            if st.checkbox(
+                f"{display_name} (BirdNET conf: {confidence:.2f})",
+                key=f"local_species_{index}_{form_key}",
+            ):
+                selected_species.append(species)
 
-            selected_species = []
-            for index, (species, confidence) in enumerate(species_data):
-                display_name = translate_species_name(species, language)
-                if st.checkbox(
-                    f"{display_name} (BirdNET conf: {confidence:.2f})",
-                    key=f"local_species_{index}_{form_key}",
-                ):
-                    selected_species.append(species)
+        none_of_above = st.checkbox(
+            "❌ None of the above species are present",
+            key=f"local_none_{form_key}",
+            help=(
+                "Check this if you cannot hear any "
+                "of the species listed above"
+            ),
+        )
+        if none_of_above:
+            selected_species = ["NONE_DETECTED"]
 
-            none_of_above = st.checkbox(
-                "❌ None of the above species are present",
-                key=f"local_none_{form_key}",
-                help=(
-                    "Check this if you cannot hear any "
-                    "of the species listed above"
-                ),
-            )
-            if none_of_above:
-                selected_species = ["NONE_DETECTED"]
+        peer_review = st.checkbox(
+            "🔄 Request peer review",
+            key=f"local_peer_review_{form_key}",
+            help=(
+                "Check this if you are unsure and want "
+                "other annotators to also validate this clip"
+            ),
+        )
 
-            peer_review = st.checkbox(
-                "🔄 Request peer review",
-                key=f"local_peer_review_{form_key}",
-                help=(
-                    "Check this if you are unsure and want "
-                    "other annotators to also validate this clip"
-                ),
-            )
+        st.markdown("---")
 
-            st.markdown("---")
-
-            # Additional species not in BirdNET predictions
+        # Additional species not in BirdNET predictions
+        with st.expander("🐦 Other species not listed above", expanded=False, key=f"exp_other_{form_key}"):
             all_species = _get_all_species_list(language)
             other_species_display = st.multiselect(
-                "**Other species not listed above:**",
+                "Start typing to search...",
                 options=all_species,
                 default=[],
                 placeholder="Start typing to search...",
                 key=f"local_other_{form_key}",
+                label_visibility="collapsed",
             )
             # Map back to English for storage
             if language != "en_uk":
@@ -107,10 +103,8 @@ def render_local_validation_form(result, selections):
             else:
                 other_species = other_species_display
 
-            st.markdown("---")
-
-            # Noise/sound environment checkboxes
-            st.markdown("#### 📝 Additional sounds")
+        # Noise/sound environment checkboxes
+        with st.expander("📝 Additional sounds", expanded=False, key=f"exp_noise_{form_key}"):
             user_notes = []
             noise_classes = [
                 "Loud foreground noise",
@@ -136,10 +130,8 @@ def render_local_validation_form(result, selections):
                     if st.checkbox(noise, key=f"local_{noise}_{form_key}"):
                         user_notes.append(noise)
 
-            st.markdown("---")
-
-            # Free-text comments
-            st.markdown("#### 💬 Comments")
+        # Free-text comments
+        with st.expander("💬 Comments", expanded=False, key=f"exp_comments_{form_key}"):
             user_comments = st.text_area(
                 "Additional comments:",
                 placeholder=(
@@ -147,35 +139,36 @@ def render_local_validation_form(result, selections):
                     "'Multiple individuals', "
                     "'Uncertain due to noise'..."
                 ),
-                height=100,
+                height=80,
                 key=f"local_comments_{form_key}",
+                label_visibility="collapsed",
             )
 
-            # Confidence rating
-            user_confidence = st.radio(
-                "**How confident are you in your annotations?**",
-                options=["Low", "Moderate", "High"],
-                index=None,
-                horizontal=True,
-                help="Rate your overall confidence in the species identifications",
-            )
+        # Confidence rating
+        user_confidence = st.radio(
+            "**How confident are you in your annotations?**",
+            options=["Low", "Moderate", "High"],
+            index=None,
+            horizontal=True,
+            help="Rate your overall confidence in the species identifications",
+        )
 
-            submitted = st.form_submit_button(
-                "✅ Submit Validation",
-                type="primary",
-                use_container_width=True,
-            )
+        submitted = st.form_submit_button(
+            "✅ Submit Validation",
+            type="primary",
+            use_container_width=True,
+        )
 
-            if submitted:
-                _handle_local_submission(
-                    result,
-                    selected_species,
-                    other_species,
-                    user_notes,
-                    user_confidence,
-                    user_comments,
-                    peer_review,
-                )
+        if submitted:
+            _handle_local_submission(
+                result,
+                selected_species,
+                other_species,
+                user_notes,
+                user_confidence,
+                user_comments,
+                peer_review,
+            )
 
 
 def _handle_local_submission(
