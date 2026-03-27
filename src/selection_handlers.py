@@ -92,9 +92,12 @@ def render_local_data_loader():
     st.session_state.annotator_name = annotator
 
     if not AUDIO_DIR or not RESULTS_DIR or not OUTPUT_DIR:
-        st.sidebar.error(
-            "❌ Missing paths in `CONFIG.yaml` file.\n\n"
-            "Set `audio_dir`, `results_dir`, and `output_dir`."
+        st.sidebar.info(
+            "📂 **Paths not configured yet.**\n\n"
+            "Please provide your audio, results, and output directories.\n\n"
+            "**Using Python/R?** Pass them to `run()` or `run_validator()`.\n\n"
+            "**Using CONFIG.yaml?** Set `audio_dir`, `results_dir`, and `output_dir`.\n\n"
+            "🔄 *After updating paths, restart the app to apply changes.*"
         )
         return False
 
@@ -104,11 +107,21 @@ def render_local_data_loader():
 
     # Validate local paths (S3 paths are validated when accessed)
     if not is_s3_path(audio_dir) and not Path(audio_dir).is_dir():
-        st.sidebar.error(f"❌ Directory not found: `{audio_dir}`")
+        st.sidebar.info(
+            f"📂 **Audio directory not found:**\n\n"
+            f"`{audio_dir}`\n\n"
+            "Check that the path exists and is spelled correctly.\n\n"
+            "🔄 *After updating paths, restart the app to apply changes.*"
+        )
         return False
 
     if not is_s3_path(results_dir) and not Path(results_dir).is_dir():
-        st.sidebar.error(f"❌ Directory not found: `{results_dir}`")
+        st.sidebar.info(
+            f"📂 **Results directory not found:**\n\n"
+            f"`{results_dir}`\n\n"
+            "Check that the path exists and is spelled correctly.\n\n"
+            "🔄 *After updating paths, restart the app to apply changes.*"
+        )
         return False
 
     if not is_s3_path(output_dir):

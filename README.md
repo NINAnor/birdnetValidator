@@ -5,7 +5,7 @@
 A Streamlit web app for **validating** bird species detections made by [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) or any model with a compatible output (see [Expected Data Format](#-expected-data-format)). This is **not** a detection tool — run BirdNET first, then use this app to listen to each detection and confirm or reject species identifications.
 
 <p align="center">
-  <img src="assets/screenshot_app.png" width="4s00" alt="Screenshot">
+  <img src="assets/screenshot_app.png" width="400" alt="Screenshot">
 </p>
 
 ---

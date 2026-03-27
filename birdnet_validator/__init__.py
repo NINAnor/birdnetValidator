@@ -3,14 +3,29 @@
 import os
 import subprocess
 import sys
+import threading
+import time
 import webbrowser
 from pathlib import Path
 
 __version__ = "0.1.0"
 
 _PACKAGE_DIR = Path(__file__).parent
-_PROJECT_ROOT = _PACKAGE_DIR.parent
-_DASHBOARD = _PROJECT_ROOT / "src" / "dashboard.py"
+_DASHBOARD = _PACKAGE_DIR.parent / "src" / "dashboard.py"
+
+
+def _open_browser_when_ready(port, timeout=30):
+    """Wait for Streamlit to start, then open the browser."""
+    import urllib.request
+    url = f"http://localhost:{port}"
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            urllib.request.urlopen(url, timeout=1)
+            webbrowser.open(url)
+            return
+        except Exception:
+            time.sleep(0.5)
 
 
 def run(
@@ -58,7 +73,11 @@ def run(
         env["BIRDNET_S3_SECRET_KEY"] = s3_secret_key
 
     if open_browser:
-        webbrowser.open(f"http://localhost:{port}")
+        threading.Thread(
+            target=_open_browser_when_ready,
+            args=(port,),
+            daemon=True,
+        ).start()
 
     cmd = [
         sys.executable, "-m", "streamlit", "run",
