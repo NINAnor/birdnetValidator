@@ -1,16 +1,16 @@
 # Path to the directory containing your audio files (.wav, .flac, .mp3, .ogg)
 # Can be a local path or an S3 URI (s3://bucket/path/to/audio)
-AUDIO_DIR=/path/to/your/audio/files
+audio_dir: /path/to/your/audio/files
 
 # Path to the directory containing BirdNET result files (.txt)
 # Can be a local path or an S3 URI (s3://bucket/path/to/results)
-RESULTS_DIR=/path/to/your/birdnet/results
+results_dir: /path/to/your/birdnet/results
 
 # Path where validation results will be saved (created automatically if needed)
 # Can be a local path or an S3 URI (s3://bucket/path/to/output)
-OUTPUT_DIR=/path/to/output
+output_dir: /path/to/output
 
 # S3 credentials (only needed when using s3:// paths)
-# S3_ENDPOINT_URL=https://your-s3-endpoint.com
-# S3_ACCESS_KEY=your-access-key
-# S3_SECRET_KEY=your-secret-key
+# s3_endpoint_url: https://your-s3-endpoint.com
+# s3_access_key: your-access-key
+# s3_secret_key: your-secret-key

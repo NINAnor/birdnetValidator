@@ -12,7 +12,7 @@ services:
     <<: *default-common-deployment
     build:
       context: .
-    env_file:
-      - .env
+    volumes:
+      - ./CONFIG.yaml:/app/CONFIG.yaml:ro
     ports:
       - "8501:8501"

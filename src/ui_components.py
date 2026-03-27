@@ -124,8 +124,8 @@ def render_local_help_section():
         st.markdown("""### 📖 How to use
 
 **Getting Started:**
-1. Copy `.env.example` to `.env` and set your three directory paths (local or `s3://`)
-2. For S3, also set `S3_ENDPOINT_URL`, `S3_ACCESS_KEY`, and `S3_SECRET_KEY`
+1. Copy `CONFIG.yaml.example` to `CONFIG.yaml` and set your three directory paths (local or `s3://`)
+2. For S3, also set `s3_endpoint_url`, `s3_access_key`, and `s3_secret_key`
 3. Run the app with `uv run streamlit run src/dashboard.py`
 4. **Adjust** the confidence threshold and species filters in the sidebar
 
@@ -256,4 +256,4 @@ def render_local_empty_placeholder():
     """Render placeholder when no clip is loaded."""
     with st.container(border=True):
         st.markdown("### 🎯 Validation")
-        st.info("📁 Set AUDIO_DIR, RESULTS_DIR, and OUTPUT_DIR in your .env file (local paths or s3:// URIs).")
+        st.info("📁 Set audio_dir, results_dir, and output_dir in CONFIG.yaml (local paths or s3:// URIs).")

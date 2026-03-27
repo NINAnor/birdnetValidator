@@ -33,26 +33,26 @@ uv sync
 
 ### 3. Configure paths
 
-Copy the example environment file and edit it with your paths:
+Copy the example configuration file and edit it with your paths:
 
 ```bash
-cp .env.example .env
+cp CONFIG.yaml.example CONFIG.yaml
 ```
 
-Set the three required directories in `.env`:
+Set the three required directories in `CONFIG.yaml`:
 
-```dotenv
-AUDIO_DIR=/path/to/your/audio/files
-RESULTS_DIR=/path/to/your/birdnet/results
-OUTPUT_DIR=/path/to/output
+```yaml
+audio_dir: /path/to/your/audio/files
+results_dir: /path/to/your/birdnet/results
+output_dir: /path/to/output
 ```
 
 Paths can be local directories or S3 URIs (e.g. `s3://my-bucket/audio`). When using S3 paths, also fill in the S3 credentials:
 
-```dotenv
-S3_ENDPOINT_URL=https://your-s3-endpoint.com
-S3_ACCESS_KEY=your-access-key
-S3_SECRET_KEY=your-secret-key
+```yaml
+s3_endpoint_url: https://your-s3-endpoint.com
+s3_access_key: your-access-key
+s3_secret_key: your-secret-key
 ```
 
 ### 4. Run the app
@@ -145,7 +145,7 @@ The app can be containerised for deployment on a shared server, so multiple anno
 docker compose up --build
 ```
 
-Configure paths and S3 credentials via environment variables in `docker-compose.yml` or a `.env` file mounted into the container.
+Configure paths and S3 credentials in `CONFIG.yaml` (or mount it into the container). See `docker-compose.yml` for volume mapping.
 
 ## Contact
 

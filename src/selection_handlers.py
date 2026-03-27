@@ -74,7 +74,7 @@ def _load_existing_validations(output_dir, annotator):
 
 
 def render_local_data_loader():
-    """Load data from directories configured in .env.
+    """Load data from directories configured in CONFIG.yaml.
 
     Returns True if data has been loaded successfully.
     """
@@ -101,8 +101,8 @@ def render_local_data_loader():
 
     if not AUDIO_DIR or not RESULTS_DIR or not OUTPUT_DIR:
         st.sidebar.error(
-            "❌ Missing paths in `.env` file.\n\n"
-            "Set `AUDIO_DIR`, `RESULTS_DIR`, and `OUTPUT_DIR`."
+            "❌ Missing paths in `CONFIG.yaml` file.\n\n"
+            "Set `audio_dir`, `results_dir`, and `output_dir`."
         )
         return False
 

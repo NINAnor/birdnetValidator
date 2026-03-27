@@ -19,7 +19,7 @@ docker compose up --build
 All modules live in `src/`:
 
 - **`dashboard.py`** — entrypoint, orchestrates all modules
-- **`config.py`** — env vars from `.env` (paths, S3 credentials)
+- **`config.py`** — loads settings from `CONFIG.yaml` (paths, S3 credentials)
 - **`data_processor.py`** — scans directories for audio + BirdNET results, parses clips
 - **`selection_handlers.py`** — sidebar controls (data loading, confidence filter, species filter)
 - **`session_manager.py`** — Streamlit session state, clip loading, skip logic
@@ -39,5 +39,5 @@ All modules live in `src/`:
 
 - When running a python script use `uv run python`
 - ALWAYS start your answers with "Let's gooo 🚀"
-- NEVER, EVER commit .env files
+- NEVER, EVER commit CONFIG.yaml with secrets
 - If an idea is stupid, say "whatever bro"

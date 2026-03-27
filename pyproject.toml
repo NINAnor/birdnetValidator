@@ -15,8 +15,8 @@ dependencies = [
   "matplotlib>=3.7.0",
   "numpy>=1.24.0",
   "pandas>=2.0.0",
-  "python-dotenv>=1.0.0",
-  "streamlit>=1.52.2"
+  "pyyaml>=6.0.3",
+  "streamlit>=1.52.2",
 ]
 description = "Streamlit app for validating BirdNET / PERCH species detections."
 license = "GPL-3.0+"
@@ -25,23 +25,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "0.1.0"
 
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src", "assets"]
-
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
-
-[project.scripts]
-birdnet-validator = "cli:main"
-
 
 [tool.deptry]
 ignore = ["DEP001", "DEP002"]
-known_first_party = ["cli", "config", "utils", "s3_utils", "data_processor", "selection_handlers", "session_manager", "ui_components", "validation_handlers"]
+known_first_party = ["config", "utils", "s3_utils", "data_processor", "selection_handlers", "session_manager", "ui_components", "validation_handlers"]
 
 [tool.ruff]
 fix = true
