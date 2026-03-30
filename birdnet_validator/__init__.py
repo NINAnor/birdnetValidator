@@ -62,15 +62,15 @@ def run(
     """
     # Pass config via environment variables
     env = os.environ.copy()
-    env["BIRDNET_AUDIO_DIR"] = str(audio_dir)
-    env["BIRDNET_RESULTS_DIR"] = str(results_dir)
-    env["BIRDNET_OUTPUT_DIR"] = str(output_dir)
+    env["AUDIO_DIR"] = str(audio_dir)
+    env["RESULTS_DIR"] = str(results_dir)
+    env["OUTPUT_DIR"] = str(output_dir)
     if s3_endpoint_url:
-        env["BIRDNET_S3_ENDPOINT_URL"] = s3_endpoint_url
+        env["S3_ENDPOINT_URL"] = s3_endpoint_url
     if s3_access_key:
-        env["BIRDNET_S3_ACCESS_KEY"] = s3_access_key
+        env["S3_ACCESS_KEY"] = s3_access_key
     if s3_secret_key:
-        env["BIRDNET_S3_SECRET_KEY"] = s3_secret_key
+        env["S3_SECRET_KEY"] = s3_secret_key
 
     if open_browser:
         threading.Thread(

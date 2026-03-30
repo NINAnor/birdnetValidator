@@ -4,4 +4,4 @@ __pycache__/
 .git
 .pre-commit-config.yaml
 .venv
-CONFIG.yaml
+.env

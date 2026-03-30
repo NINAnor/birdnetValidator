@@ -117,7 +117,7 @@ birdnet-validator \
 git clone https://github.com/NINAnor/birdnetValidator.git
 cd birdnetValidator
 uv sync
-cp CONFIG.yaml.example CONFIG.yaml   # edit with your paths
+cp .env.example .env   # edit with your paths
 uv run streamlit run src/dashboard.py
 ```
 
@@ -209,7 +209,7 @@ Deploy on a shared server so your team can validate from their browser:
 docker compose up --build
 ```
 
-Configure paths in `CONFIG.yaml` (mounted as a volume). See `docker-compose.yml` for details.
+Set your paths in `.env` (see `.env.example`). See `docker-compose.yml` for details.
 
 ---
 

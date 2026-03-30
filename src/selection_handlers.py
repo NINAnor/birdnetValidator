@@ -72,7 +72,7 @@ def _load_existing_validations(output_dir, annotator):
 
 
 def render_local_data_loader():
-    """Load data from directories configured in CONFIG.yaml.
+    """Load data from directories configured in .env or environment variables.
 
     Returns True if data has been loaded successfully.
     """
@@ -96,7 +96,7 @@ def render_local_data_loader():
             "📂 **Paths not configured yet.**\n\n"
             "Please provide your audio, results, and output directories.\n\n"
             "**Using Python/R?** Pass them to `run()` or `run_validator()`.\n\n"
-            "**Using CONFIG.yaml?** Set `audio_dir`, `results_dir`, and `output_dir`.\n\n"
+            "**Using `.env` file?** Set `BIRDNET_AUDIO_DIR`, `BIRDNET_RESULTS_DIR`, and `BIRDNET_OUTPUT_DIR`.\n\n"
             "🔄 *After updating paths, restart the app to apply changes.*"
         )
         return False
