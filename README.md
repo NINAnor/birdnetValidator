@@ -29,15 +29,47 @@ A Streamlit web app for **validating** bird species detections made by [BirdNET]
 
 ## 🚀 Getting Started
 
-### Option A: Python package (recommended)
+### Option A: One-line install (recommended)
 
-Install directly from GitHub — no config files needed:
+> **Never used Python before? No problem!** Follow the steps below.
+
+#### Step 1: Install Python
+
+Download and install Python from [python.org](https://www.python.org/downloads/) (version 3.10 or newer).
+
+- **Windows:** Download the installer, run it, and **check the box "Add Python to PATH"** before clicking Install
+- **Mac:** Download the macOS installer and follow the prompts
+- **Linux:** Python is usually pre-installed. Check with `python3 --version`
+
+#### Step 2: Install the app
+
+Open a terminal (or Command Prompt on Windows) and run:
 
 ```bash
 pip install git+https://github.com/NINAnor/birdnetValidator.git
 ```
 
-Then in Python:
+This installs everything you need. It may take a minute or two.
+
+#### Step 3: Launch!
+
+In the same terminal, run:
+
+```bash
+birdnet-validator \
+    --audio-dir /path/to/your/audio \
+    --results-dir /path/to/your/birdnet/results \
+    --output-dir /path/to/your/output
+```
+
+Replace the paths with your actual directories. The app opens in your browser automatically. 🎉
+
+> **Windows tip:** Use backslashes in paths and put the whole command on one line:
+> ```
+> birdnet-validator --audio-dir C:\Users\me\audio --results-dir C:\Users\me\results --output-dir C:\Users\me\output
+> ```
+
+You can also use it from a Python script:
 
 ```python
 import birdnet_validator
@@ -47,17 +79,6 @@ birdnet_validator.run(
     results_dir="/path/to/results",
     output_dir="/path/to/output",
 )
-```
-
-This opens the app in your browser automatically. That's it! 🎉
-
-Or from the command line:
-
-```bash
-birdnet-validator \
-    --audio-dir /path/to/audio \
-    --results-dir /path/to/results \
-    --output-dir /path/to/output
 ```
 
 <details>
@@ -90,31 +111,7 @@ birdnet-validator \
 
 </details>
 
-### Option B: R package
-
-Install directly from GitHub — Python dependencies are handled automatically:
-
-```r
-remotes::install_github("NINAnor/birdnetValidator", subdir = "r-package")
-```
-
-Then:
-
-```r
-library(birdnetValidator)
-
-run_validator(
-  audio_dir = "/path/to/audio",
-  results_dir = "/path/to/results",
-  output_dir = "/path/to/output"
-)
-```
-
-The first call sets up a Python environment behind the scenes. Subsequent calls start instantly.
-
-> **Note:** Python (>= 3.10) must be installed on your system. You can download it from [python.org](https://www.python.org/downloads/). The R package handles everything else (virtual environment, Python dependencies).
-
-### Option C: From source (for developers)
+### Option B: From source (for developers)
 
 ```bash
 git clone https://github.com/NINAnor/birdnetValidator.git
