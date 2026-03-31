@@ -15,9 +15,6 @@ ADD src/ /app/src
 ADD assets/ /app/assets
 COPY entrypoint.sh /app/
 
-# Create mount point
-RUN mkdir -p /data
-
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
 
