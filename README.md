@@ -31,42 +31,34 @@ A Streamlit web app for **validating** bird species detections made by [BirdNET]
 
 ### Option A: One-line install (recommended)
 
-> **Never used Python before? No problem!** Follow the steps below.
+> **Never used Python before? No problem!** You don't need to install Python — the tool below handles everything.
 
-#### Step 1: Install Python
+#### Step 1: Install uv
 
-Download and install Python from [python.org](https://www.python.org/downloads/) (version 3.10 or newer).
-
-- **Windows:** Download the installer, run it, and **check the box "Add Python to PATH"** before clicking Install
-- **Mac:** Download the macOS installer and follow the prompts
-- **Linux:** Python is usually pre-installed. Check with `python3 --version`
-
-#### Step 2: Install the app
-
-Open a terminal (or Command Prompt on Windows) and run:
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager that **automatically installs Python for you**. Open a terminal (or Command Prompt on Windows) and run:
 
 ```bash
-pip install git+https://github.com/NINAnor/birdnetValidator.git
+# Mac / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-This installs everything you need. It may take a minute or two.
-
-#### Step 3: Launch!
-
-In the same terminal, run:
+#### Step 2: Launch!
 
 ```bash
-birdnet-validator \
+uvx --from git+https://github.com/NINAnor/birdnetValidator.git birdnet-validator \
     --audio-dir /path/to/your/audio \
     --results-dir /path/to/your/birdnet/results \
     --output-dir /path/to/your/output
 ```
 
-Replace the paths with your actual directories. The app opens in your browser automatically. 🎉
+Replace the paths with your actual directories. The first run downloads dependencies (may take a minute); subsequent runs start instantly. The app opens in your browser automatically. 🎉
 
 > **Windows tip:** Use backslashes in paths and put the whole command on one line:
 > ```
-> birdnet-validator --audio-dir C:\Users\me\audio --results-dir C:\Users\me\results --output-dir C:\Users\me\output
+> uvx --from git+https://github.com/NINAnor/birdnetValidator.git birdnet-validator --audio-dir C:\Users\me\audio --results-dir C:\Users\me\results --output-dir C:\Users\me\output
 > ```
 
 You can also use it from a Python script:
