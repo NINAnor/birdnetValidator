@@ -95,8 +95,8 @@ def render_local_data_loader():
         st.sidebar.info(
             "📂 **Paths not configured yet.**\n\n"
             "Please provide your audio, results, and output directories.\n\n"
-            "**Using Python/R?** Pass them to `run()` or `run_validator()`.\n\n"
-            "**Using `.env` file?** Set `BIRDNET_AUDIO_DIR`, `BIRDNET_RESULTS_DIR`, and `BIRDNET_OUTPUT_DIR`.\n\n"
+            "**Using Python?** Pass them to `run()`.\n\n"
+            "**Using `.env` file?** Set `AUDIO_DIR`, `RESULTS_DIR`, and `OUTPUT_DIR`.\n\n"
             "🔄 *After updating paths, restart the app to apply changes.*"
         )
         return False

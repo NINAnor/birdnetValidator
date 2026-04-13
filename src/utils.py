@@ -96,9 +96,18 @@ def extract_clip(file_path, start_time, context_before=1, context_after=4, sr=48
         else:
             audio_data, _ = librosa.load(file_path, sr=sr, mono=True)
 
-        start_sample = max(0, int((start_time - context_before) * sr))
-        end_sample = int((start_time + context_after) * sr)
-        return audio_data[start_sample:end_sample]
+        duration = len(audio_data) / sr
+        clip_start = max(0.0, start_time - context_before)
+        clip_end = min(duration, start_time + context_after)
+
+        start_sample = int(clip_start * sr)
+        end_sample = int(clip_end * sr)
+
+        clip = audio_data[start_sample:end_sample]
+        if len(clip) < sr // 10:  # less than 0.1s — too short
+            st.warning("Audio clip too short at this position")
+            return None
+        return clip
     except Exception as e:
         st.error(f"Error loading audio file: {e}")
         return None

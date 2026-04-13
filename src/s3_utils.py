@@ -1,6 +1,5 @@
 """S3 utilities for reading/writing files from S3 storage."""
 
-import io
 from urllib.parse import urlparse
 
 import boto3

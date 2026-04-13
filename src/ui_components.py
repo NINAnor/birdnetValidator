@@ -138,6 +138,9 @@ def render_spectrogram(file_path, start_time, context_before=1, context_after=4,
 
 def render_audio_player(clip):
     """Render audio player widget."""
+    if clip is None:
+        st.warning("No audio available for this clip")
+        return
     st.audio(clip, format="audio/wav", sample_rate=48000)
 
 
