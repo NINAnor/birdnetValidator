@@ -5,6 +5,8 @@ Supports both local directories and S3 URIs (s3://bucket/prefix).
 
 import io
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +20,9 @@ BIRDNET_REQUIRED_COLUMNS = {
     "Confidence",
     "Begin Path",
 }
+
+# Regex to find YYYYMMDD_HHMMSS (or YYYYMMDDTHHMMSS) in a filename
+_DATETIME_PATTERN = re.compile(r"(\d{8})[_T](\d{6})")
 
 
 def process_local_directories(audio_dir, results_dir):
@@ -116,10 +121,11 @@ def _parse_birdnet_results(result_files, audio_files):
 
     clips = []
     for (audio_path, begin_time), group in grouped:
+        basename = group["audio_basename"].iloc[0]
         clips.append(
             {
                 "filename": audio_path,
-                "audio_basename": group["audio_basename"].iloc[0],
+                "audio_basename": basename,
                 "start_time": float(begin_time),
                 "end_time": float(group["End Time (s)"].iloc[0]),
                 "species_array": group["Common Name"].tolist(),
@@ -127,6 +133,7 @@ def _parse_birdnet_results(result_files, audio_files):
                     float(c) for c in group["Confidence"].tolist()
                 ],
                 "species_codes": group["Species Code"].tolist(),
+                "recording_datetime": parse_datetime_from_filename(basename),
             }
         )
 
@@ -140,3 +147,20 @@ def get_unique_species(clips):
     for clip in clips:
         species.update(clip["species_array"])
     return sorted(species)
+
+
+def parse_datetime_from_filename(filename):
+    """Extract a datetime from a filename containing YYYYMMDD_HHMMSS.
+
+    Returns a datetime object, or None if no pattern is found.
+    Examples:
+        SMA13789_20250927_182102.wav  -> 2025-09-27 18:21:02
+        recorder_20231015T060000.flac -> 2023-10-15 06:00:00
+    """
+    match = _DATETIME_PATTERN.search(filename)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1) + match.group(2), "%Y%m%d%H%M%S")
+    except ValueError:
+        return None

@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from data_processor import get_unique_species, process_local_directories
+from data_processor import get_unique_species, parse_datetime_from_filename, process_local_directories
 from s3_utils import is_s3_path, list_s3_files, read_s3_text
 from utils import LANGUAGE_OPTIONS, translate_species_name
 
@@ -239,6 +239,82 @@ def render_local_species_filter(selections):
     return None
 
 
+def render_local_date_filter():
+    """Render date range filter as an always-visible slider.
+
+    Returns (start_date, end_date) as date objects, or None if no dates available.
+    """
+    clips = st.session_state.get("local_clips", [])
+    if not clips:
+        return None
+
+    # Collect all dates from clips that have datetime info
+    dates = [
+        clip["recording_datetime"].date()
+        for clip in clips
+        if clip.get("recording_datetime")
+    ]
+    if not dates:
+        return None
+
+    min_date = min(dates)
+    max_date = max(dates)
+
+    if min_date == max_date:
+        return None
+
+    st.sidebar.markdown("---")
+    filter_enabled = st.sidebar.checkbox(
+        "📅 Filter by date",
+        value=False,
+        help="Show only clips recorded within a date range",
+    )
+    if not filter_enabled:
+        return None
+
+    date_range = st.sidebar.slider(
+        "Recording date range",
+        min_value=min_date,
+        max_value=max_date,
+        value=(min_date, max_date),
+        format="YYYY-MM-DD",
+    )
+
+    return date_range
+
+
+def render_local_time_filter():
+    """Render time-of-day range filter as a slider (0–23).
+
+    Returns (start_hour, end_hour) as integers, or None if disabled.
+    """
+    clips = st.session_state.get("local_clips", [])
+    if not clips:
+        return None
+
+    has_datetime = any(clip.get("recording_datetime") for clip in clips)
+    if not has_datetime:
+        return None
+
+    filter_enabled = st.sidebar.checkbox(
+        "🕐 Filter by time of day",
+        value=False,
+        help="Show only clips recorded within a time-of-day range (e.g. dawn chorus)",
+    )
+    if not filter_enabled:
+        return None
+
+    time_range = st.sidebar.slider(
+        "Time of day (hour)",
+        min_value=0,
+        max_value=23,
+        value=(0, 23),
+        help="Filter by recording hour (0 = midnight, 12 = noon)",
+    )
+
+    return time_range
+
+
 def get_local_user_selections():
     """Orchestrate all local mode sidebar selections.
 
@@ -259,5 +335,11 @@ def get_local_user_selections():
 
     species_filter = render_local_species_filter(selections)
     selections["species_filter"] = species_filter
+
+    date_range = render_local_date_filter()
+    selections["date_range"] = date_range
+
+    time_range = render_local_time_filter()
+    selections["time_range"] = time_range
 
     return selections

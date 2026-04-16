@@ -25,11 +25,13 @@ def initialize_local_session():
 
 
 def _get_filtered_clips(selections):
-    """Get clips filtered by confidence threshold and species selection."""
+    """Get clips filtered by confidence threshold, species selection, and date range."""
     clips = st.session_state.get("local_clips", [])
 
     confidence_range = selections.get("confidence_range", (0.0, 1.0))
     species_filter = selections.get("species_filter")
+    date_range = selections.get("date_range")
+    time_range = selections.get("time_range")
 
     filtered = []
     for clip in clips:
@@ -43,6 +45,22 @@ def _get_filtered_clips(selections):
         # If species filter is set, at least one detected species must match
         if species_filter:
             if not any(species in species_filter for species in clip["species_array"]):
+                continue
+
+        # If date filter is set, clip must fall within the range
+        if date_range:
+            recording_dt = clip.get("recording_datetime")
+            if recording_dt is None:
+                continue
+            if not (date_range[0] <= recording_dt.date() <= date_range[1]):
+                continue
+
+        # If time filter is set, clip hour must fall within the range
+        if time_range:
+            recording_dt = clip.get("recording_datetime")
+            if recording_dt is None:
+                continue
+            if not (time_range[0] <= recording_dt.hour <= time_range[1]):
                 continue
 
         filtered.append(clip)
