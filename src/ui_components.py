@@ -3,8 +3,6 @@
 import io
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import pandas as pd
 import streamlit as st
 
 from config import ASSETS_DIR
@@ -59,11 +57,12 @@ def _is_dark_theme():
     return True
 
 
-def _generate_spectrogram_image(file_path, start_time, context_before=1, context_after=4):
-    """Generate spectrogram as PNG bytes."""
-    clip = extract_clip(file_path, start_time, context_before, context_after)
+def _generate_spectrogram_image(clip, context_before=1):
+    """Generate spectrogram as PNG bytes from an already-loaded clip."""
     if clip is None:
         return None
+
+    import matplotlib.pyplot as plt
 
     dark = _is_dark_theme()
 
@@ -120,10 +119,10 @@ def _generate_spectrogram_image(file_path, start_time, context_before=1, context
     return buf.getvalue()
 
 
-def render_spectrogram(file_path, start_time, context_before=1, context_after=4, expanded=False):
-    """Render audio spectrogram."""
+def render_spectrogram(clip, context_before=1, expanded=False):
+    """Render audio spectrogram from an already-loaded clip."""
     with st.expander("📊 Spectrogram", expanded=expanded):
-        img_bytes = _generate_spectrogram_image(file_path, start_time, context_before, context_after)
+        img_bytes = _generate_spectrogram_image(clip, context_before)
         if img_bytes:
             st.image(img_bytes, use_container_width=True)
             line_label = "Cyan" if _is_dark_theme() else "Red"
@@ -238,7 +237,7 @@ def render_local_clip_section(result, selections):
 
         clip = extract_clip(filepath, result["start_time"], context_before, context_after)
         render_audio_player(clip)
-        render_spectrogram(filepath, result["start_time"], context_before, context_after, expanded=True)
+        render_spectrogram(clip, context_before, expanded=True)
 
     _render_local_navigation_button()
 
@@ -268,6 +267,8 @@ def _render_local_navigation_button():
 
 def render_local_download_button():
     """Render download button for all validation results (all annotators)."""
+    import pandas as pd
+
     from s3_utils import is_s3_path, list_s3_files, read_s3_text
     from selection_handlers import VALIDATIONS_PREFIX
 

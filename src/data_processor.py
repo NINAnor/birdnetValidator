@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import streamlit as st
 
 from s3_utils import is_s3_path, list_s3_files, read_s3_text
 
@@ -25,6 +26,7 @@ BIRDNET_REQUIRED_COLUMNS = {
 _DATETIME_PATTERN = re.compile(r"(\d{8})[_T](\d{6})")
 
 
+@st.cache_data(show_spinner=False)
 def process_local_directories(audio_dir, results_dir):
     """Scan directories for audio files and BirdNET results.
 
@@ -55,9 +57,9 @@ def _find_audio_files(root_dir):
     audio_map = {}
     for root, _, files in os.walk(root_dir):
         for filename in files:
-            if Path(filename).suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS:
-                full_path = str(Path(root) / filename)
-                audio_map[filename] = full_path
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in SUPPORTED_AUDIO_EXTENSIONS:
+                audio_map[filename] = os.path.join(root, filename)
     return audio_map
 
 
@@ -107,9 +109,7 @@ def _parse_birdnet_results(result_files, audio_files):
         return []
 
     # Match audio files by basename of the original path
-    combined["audio_basename"] = combined["Begin Path"].apply(
-        lambda p: Path(p).name
-    )
+    combined["audio_basename"] = combined["Begin Path"].apply(os.path.basename)
     combined["local_audio_path"] = combined["audio_basename"].map(audio_files)
     combined = combined.dropna(subset=["local_audio_path"])
 

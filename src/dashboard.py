@@ -2,6 +2,7 @@
 
 import streamlit as st
 
+from overview import render_overview_tab
 from selection_handlers import get_local_user_selections
 from session_manager import get_or_load_local_clip, initialize_local_session
 from ui_components import (
@@ -26,30 +27,36 @@ def main():
         st.info("👤 Enter your name in the sidebar to start validating.")
         return
 
-    st.markdown("---")
-    result = get_or_load_local_clip(selections)
+    tab_validate, tab_overview = st.tabs(["🎧 Validate", "📊 Overview"])
 
-    # Progress bar
-    if result and not result.get("all_validated"):
-        validated_count = result.get("validated_count", 0)
-        total_filtered = result.get("total_filtered", 1)
-        st.progress(
-            validated_count / total_filtered,
-            text=f"📊 {validated_count} / {total_filtered} clips validated",
-        )
+    with tab_validate:
+        st.markdown("---")
+        result = get_or_load_local_clip(selections)
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        clip_loaded = render_local_clip_section(result, selections)
-    with col2:
-        if result and not result.get("all_validated") and clip_loaded:
-            render_local_validation_form(result, selections)
-        elif result and result.get("all_validated"):
-            st.markdown("### 🎯 Validation")
-            st.success("🎉 All clips validated!")
-            render_local_download_button()
-        else:
-            render_local_empty_placeholder()
+        # Progress bar
+        if result and not result.get("all_validated"):
+            validated_count = result.get("validated_count", 0)
+            total_filtered = result.get("total_filtered", 1)
+            st.progress(
+                validated_count / total_filtered,
+                text=f"📊 {validated_count} / {total_filtered} clips validated",
+            )
+
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            clip_loaded = render_local_clip_section(result, selections)
+        with col2:
+            if result and not result.get("all_validated") and clip_loaded:
+                render_local_validation_form(result, selections)
+            elif result and result.get("all_validated"):
+                st.markdown("### 🎯 Validation")
+                st.success("🎉 All clips validated!")
+                render_local_download_button()
+            else:
+                render_local_empty_placeholder()
+
+    with tab_overview:
+        render_overview_tab()
 
     # Always show download button in sidebar if there are validations
     if st.session_state.get("local_validations"):

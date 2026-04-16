@@ -1,15 +1,10 @@
 """Local Mode Session Management."""
 
-import uuid
-
 import streamlit as st
 
 
 def initialize_local_session():
     """Initialize local mode session state variables."""
-    if "session_id" not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())[:8]
-
     defaults = {
         "local_current_clip": None,
         "local_path_key": None,

@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from data_processor import get_unique_species, parse_datetime_from_filename, process_local_directories
+from data_processor import get_unique_species, process_local_directories
 from s3_utils import is_s3_path, list_s3_files, read_s3_text
 from utils import LANGUAGE_OPTIONS, translate_species_name
 
