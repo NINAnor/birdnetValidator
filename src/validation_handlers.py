@@ -36,6 +36,29 @@ def render_local_validation_form(result, selections):
 
     form_key = st.session_state.get("local_form_key", 0)
 
+    # Custom label management — outside the form so Enter doesn't submit
+    if "custom_label_options" not in st.session_state:
+        st.session_state.custom_label_options = []
+
+    with st.expander("🏷️ Manage custom labels", expanded=False, key=f"exp_manage_labels_{form_key}"):
+        st.caption("Create labels like *male*, *female*, *call*, *song*, *juvenile*... "
+                   "They'll appear in the form below for every clip.")
+        new_label = st.text_input(
+            "Add a new label:",
+            placeholder="Type a label and press Enter...",
+            key=f"local_new_label_{form_key}",
+        )
+        if new_label:
+            label_clean = new_label.strip()
+            if label_clean and label_clean not in st.session_state.custom_label_options:
+                st.session_state.custom_label_options.append(label_clean)
+                st.rerun()
+
+        if st.session_state.custom_label_options:
+            st.markdown("**Current labels:** " + ", ".join(
+                f"`{l}`" for l in sorted(st.session_state.custom_label_options)
+            ))
+
     with st.container(border=True), st.form(f"local_validation_form_{form_key}"):
         st.markdown("#### Species detected by BirdNET:")
         st.markdown("**Select which species you can actually hear:**")
@@ -159,6 +182,19 @@ def render_local_validation_form(result, selections):
                 label_visibility="collapsed",
             )
 
+        # Custom labels (select from labels created above)
+        custom_labels = []
+        if st.session_state.custom_label_options:
+            with st.expander("🏷️ Custom labels", expanded=False, key=f"exp_labels_{form_key}"):
+                custom_labels = st.multiselect(
+                    "Select labels for this clip:",
+                    options=sorted(st.session_state.custom_label_options),
+                    default=[],
+                    placeholder="Select labels...",
+                    key=f"local_labels_{form_key}",
+                    label_visibility="collapsed",
+                )
+
         # Confidence rating
         user_confidence = st.radio(
             "**How confident are you in your annotations?**",
@@ -183,6 +219,7 @@ def render_local_validation_form(result, selections):
                 user_confidence,
                 user_comments,
                 peer_review,
+                custom_labels,
             )
 
 
@@ -194,6 +231,7 @@ def _handle_local_submission(
     user_confidence,
     user_comments,
     peer_review,
+    custom_labels,
 ):
     """Handle local validation form submission."""
     if not user_confidence:
@@ -223,6 +261,7 @@ def _handle_local_submission(
         "user_comments": user_comments,
         "annotator": st.session_state.get("annotator_name", "unknown"),
         "peer_review": peer_review,
+        "custom_labels": list_to_string(custom_labels),
         "timestamp": pd.Timestamp.now().isoformat(),
     }
 

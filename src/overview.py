@@ -63,7 +63,7 @@ def _build_matrix_data(clips, validations, granularity):
                 if isinstance(identified, str):
                     identified_list = identified.split("|")
                 else:
-                    identified_list = list(identified)
+                    identified_list = []
                 if species in identified_list:
                     cell["correct"] += 1
 
@@ -267,7 +267,7 @@ def _build_confidence_matrix_data(clips, validations):
                 if isinstance(identified, str):
                     identified_list = identified.split("|")
                 else:
-                    identified_list = list(identified)
+                    identified_list = []
                 if species in identified_list:
                     cell["correct"] += 1
 
