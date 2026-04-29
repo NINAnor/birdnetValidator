@@ -20,6 +20,7 @@ dependencies = [
   "pandas>=2.0.0",
   "python-dotenv>=1.0.0",
   "streamlit>=1.52.2",
+  "streamlit-searchbox>=0.1.20",
 ]
 description = "Streamlit app for validating BirdNET / PERCH species detections."
 license = "GPL-3.0+"

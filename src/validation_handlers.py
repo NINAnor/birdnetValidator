@@ -7,27 +7,9 @@ import streamlit as st
 
 from selection_handlers import VALIDATIONS_PREFIX, _get_validations_filename
 from s3_utils import is_s3_path, write_s3_text
-from utils import get_scientific_name, load_species_translations, translate_species_name
-
-
-@st.cache_data
-def _get_all_species_list(language):
-    """Get all species names in the chosen language for autocomplete."""
-    translations_df = load_species_translations()
-    if language in translations_df.columns:
-        names = translations_df[language].dropna().tolist()
-    else:
-        names = translations_df["en_uk"].dropna().tolist()
-    return sorted(names)
-
-
-@st.cache_data
-def _build_reverse_translation_map(language):
-    """Build a dict mapping translated names back to English."""
-    translations_df = load_species_translations()
-    if language not in translations_df.columns:
-        return {}
-    return dict(zip(translations_df[language], translations_df["en_uk"], strict=False))
+from gbif_utils import search_species_for_searchbox
+from streamlit_searchbox import st_searchbox
+from utils import get_scientific_name, translate_species_name
 
 
 def render_local_validation_form(result, selections):
@@ -40,26 +22,13 @@ def render_local_validation_form(result, selections):
     if "custom_label_options" not in st.session_state:
         st.session_state.custom_label_options = []
 
-    with st.expander("🏷️ Manage custom labels", expanded=False, key=f"exp_manage_labels_{form_key}"):
-        st.caption("Create labels like *male*, *female*, *call*, *song*, *juvenile*... "
-                   "They'll appear in the form below for every clip.")
-        new_label = st.text_input(
-            "Add a new label:",
-            placeholder="Type a label and press Enter...",
-            key=f"local_new_label_{form_key}",
-        )
-        if new_label:
-            label_clean = new_label.strip()
-            if label_clean and label_clean not in st.session_state.custom_label_options:
-                st.session_state.custom_label_options.append(label_clean)
-                st.rerun()
+    # GBIF species search — outside the form so Enter triggers search, not submit
+    if "gbif_selected_species" not in st.session_state:
+        st.session_state.gbif_selected_species = {}  # {scientific_name: display}
 
-        if st.session_state.custom_label_options:
-            st.markdown("**Current labels:** " + ", ".join(
-                f"`{l}`" for l in sorted(st.session_state.custom_label_options)
-            ))
+    # Wrap everything in one bordered container
+    with st.container(border=True):
 
-    with st.container(border=True), st.form(f"local_validation_form_{form_key}"):
         st.markdown("#### Species detected by BirdNET:")
         st.markdown("**Select which species you can actually hear:**")
         st.markdown("---")
@@ -123,25 +92,36 @@ def render_local_validation_form(result, selections):
                     label += f" — {' · '.join(links)}"
                 st.markdown(label)
 
-        # Additional species not in BirdNET predictions
+        # GBIF species search with autocomplete dropdown
         with st.expander("🐦 Other species not listed above", expanded=False, key=f"exp_other_{form_key}"):
-            all_species = _get_all_species_list(language)
-            other_species_display = st.multiselect(
-                "Start typing to search...",
-                options=all_species,
-                default=[],
-                placeholder="Start typing to search...",
-                key=f"local_other_{form_key}",
-                label_visibility="collapsed",
+            st.caption("Search any species by common or scientific name (powered by GBIF)")
+            selected = st_searchbox(
+                search_species_for_searchbox,
+                placeholder="e.g. Great Tit, Parus major, Red Fox...",
+                clear_on_submit=True,
+                rerun_scope="fragment",
+                key=f"local_gbif_searchbox_{form_key}",
             )
-            # Map back to English for storage
-            if language != "en_uk":
-                reverse_map = _build_reverse_translation_map(language)
-                other_species = [
-                    reverse_map.get(name, name) for name in other_species_display
-                ]
-            else:
-                other_species = other_species_display
+            if selected and selected not in st.session_state.gbif_selected_species:
+                # selected is the scientific_name (second tuple element)
+                # Re-fetch display name
+                st.session_state.gbif_selected_species[selected] = selected
+                st.rerun()
+
+            if st.session_state.gbif_selected_species:
+                st.markdown("**Selected species:**")
+                to_remove = []
+                for sci_name in list(st.session_state.gbif_selected_species):
+                    col1, col2 = st.columns([5, 1])
+                    col1.markdown(f"✅ {sci_name}")
+                    if col2.button("❌", key=f"gbif_rm_{sci_name}_{form_key}"):
+                        to_remove.append(sci_name)
+                if to_remove:
+                    for name in to_remove:
+                        del st.session_state.gbif_selected_species[name]
+                    st.rerun()
+
+        other_species = list(st.session_state.get("gbif_selected_species", {}).keys())
 
         # Noise/sound environment
         with st.expander("📝 Additional sounds", expanded=False, key=f"exp_noise_{form_key}"):
@@ -168,6 +148,38 @@ def render_local_validation_form(result, selections):
                 label_visibility="collapsed",
             )
 
+        # Custom labels management + selection
+        custom_labels = []
+        if st.session_state.custom_label_options:
+            with st.expander("🏷️ Custom labels", expanded=False, key=f"exp_labels_{form_key}"):
+                custom_labels = st.multiselect(
+                    "Select labels for this clip:",
+                    options=sorted(st.session_state.custom_label_options),
+                    default=[],
+                    placeholder="Select labels...",
+                    key=f"local_labels_{form_key}",
+                    label_visibility="collapsed",
+                )
+
+        with st.expander("🏷️ Manage custom labels", expanded=False, key=f"exp_manage_labels_{form_key}"):
+            st.caption("Create labels like *male*, *female*, *call*, *song*, *juvenile*... "
+                       "They'll appear above for every clip.")
+            new_label = st.text_input(
+                "Add a new label:",
+                placeholder="Type a label and press Enter...",
+                key=f"local_new_label_{form_key}",
+            )
+            if new_label:
+                label_clean = new_label.strip()
+                if label_clean and label_clean not in st.session_state.custom_label_options:
+                    st.session_state.custom_label_options.append(label_clean)
+                    st.rerun()
+
+            if st.session_state.custom_label_options:
+                st.markdown("**Current labels:** " + ", ".join(
+                    f"`{l}`" for l in sorted(st.session_state.custom_label_options)
+                ))
+
         # Free-text comments
         with st.expander("💬 Comments", expanded=False, key=f"exp_comments_{form_key}"):
             user_comments = st.text_area(
@@ -182,19 +194,6 @@ def render_local_validation_form(result, selections):
                 label_visibility="collapsed",
             )
 
-        # Custom labels (select from labels created above)
-        custom_labels = []
-        if st.session_state.custom_label_options:
-            with st.expander("🏷️ Custom labels", expanded=False, key=f"exp_labels_{form_key}"):
-                custom_labels = st.multiselect(
-                    "Select labels for this clip:",
-                    options=sorted(st.session_state.custom_label_options),
-                    default=[],
-                    placeholder="Select labels...",
-                    key=f"local_labels_{form_key}",
-                    label_visibility="collapsed",
-                )
-
         # Confidence rating
         user_confidence = st.radio(
             "**How confident are you in your annotations?**",
@@ -204,10 +203,11 @@ def render_local_validation_form(result, selections):
             help="Rate your overall confidence in the species identifications",
         )
 
-        submitted = st.form_submit_button(
+        submitted = st.button(
             "✅ Submit Validation",
             type="primary",
             use_container_width=True,
+            key=f"local_submit_{form_key}",
         )
 
         if submitted:
@@ -292,8 +292,9 @@ def _handle_local_submission(
         (result["filename"], result["start_time"])
     )
 
-    # Clear current clip and increment form key
+    # Clear current clip, GBIF selection, and increment form key
     st.session_state.local_current_clip = None
+    st.session_state.gbif_selected_species = {}
     st.session_state.local_form_key = (
         st.session_state.get("local_form_key", 0) + 1
     )
