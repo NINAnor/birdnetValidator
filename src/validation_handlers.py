@@ -93,23 +93,20 @@ def render_local_validation_form(result, selections):
                 st.markdown(label)
 
         # GBIF species search with autocomplete dropdown
-        with st.expander("🐦 Other species not listed above", expanded=False, key=f"exp_other_{form_key}"):
+        with st.container(border=True):
+            st.markdown("🐦 **Other species not listed above**")
             st.caption("Search any species by common or scientific name (powered by GBIF)")
             selected = st_searchbox(
                 search_species_for_searchbox,
                 placeholder="e.g. Great Tit, Parus major, Red Fox...",
                 clear_on_submit=True,
-                rerun_scope="fragment",
                 key=f"local_gbif_searchbox_{form_key}",
             )
             if selected and selected not in st.session_state.gbif_selected_species:
-                # selected is the scientific_name (second tuple element)
-                # Re-fetch display name
                 st.session_state.gbif_selected_species[selected] = selected
                 st.rerun()
 
             if st.session_state.gbif_selected_species:
-                st.markdown("**Selected species:**")
                 to_remove = []
                 for sci_name in list(st.session_state.gbif_selected_species):
                     col1, col2 = st.columns([5, 1])
